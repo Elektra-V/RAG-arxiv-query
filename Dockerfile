@@ -1,0 +1,27 @@
+# syntax=docker/dockerfile:1.6
+
+ARG PYTHON_VERSION=3.12
+FROM python:${PYTHON_VERSION}-slim AS base
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    UV_SYSTEM_WORKSPACE=/usr/local/share/uv
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        curl build-essential git && \
+    rm -rf /var/lib/apt/lists/*
+
+# Install uv (fast Python package manager)
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh && \
+    ln -s /root/.local/bin/uv /usr/local/bin/uv
+
+WORKDIR /app
+COPY pyproject.toml uv.lock README.md ./
+COPY rag_api ./rag_api
+COPY main.py ./
+
+RUN uv sync --frozen --project .
+
+ENV PATH="/app/.venv/bin:${PATH}"
+
+CMD ["uv", "run", "python", "-m", "rag_api.services.langchain.app"]
