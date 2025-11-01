@@ -78,7 +78,7 @@ qdrant
 ### Step 5: Test Ingestion
 
 ```bash
-uv run rag-api-ingest run --query "machine learning" --max-docs 3
+uv run rag-api-ingest --query "machine learning" --max-docs 3
 ```
 
 **Expected output:**

@@ -97,10 +97,10 @@ curl -X POST http://localhost:9030/ingest \
 **Option B: Using CLI:**
 ```bash
 # If running locally (not Docker)
-uv run rag-api-ingest run --query "quantum computing" --max-docs 5
+uv run rag-api-ingest --query "quantum computing" --max-docs 5
 
-# Or use defaults from .env
-uv run rag-api-ingest run
+# Or use defaults from .env (no arguments needed, but --query recommended)
+uv run rag-api-ingest --query "quantum computing"
 ```
 
 **This will:**
@@ -158,10 +158,10 @@ docker run -d -p 6334:6333 qdrant/qdrant
 
 ```bash
 # Option 1: Using CLI (recommended)
-uv run rag-api-ingest run --query "quantum computing" --max-docs 5
+uv run rag-api-ingest --query "quantum computing" --max-docs 5
 
-# Option 2: Using defaults from .env
-uv run rag-api-ingest run
+# Option 2: Using defaults from .env (query from .env file)
+uv run rag-api-ingest --max-docs 5
 
 # Option 3: Using API endpoint (if ingestion service is running)
 curl -X POST http://localhost:9030/ingest \
@@ -315,7 +315,7 @@ This uses the `langgraph.json` configuration file.
 
 **"collections": [] - Qdrant is empty**
 - **You need to ingest documents first!**
-- Run: `uv run rag-api-ingest run`
+- Run: `uv run rag-api-ingest --query "quantum computing" --max-docs 5`
 - Or use API: `curl -X POST http://localhost:9030/ingest -H "Content-Type: application/json" -d '{"query": "quantum computing", "max_docs": 5}'`
 - Without documents, queries will return no results
 
@@ -356,7 +356,7 @@ This uses the `langgraph.json` configuration file.
 
 **Complete workflow:**
 1. **Start services**: `docker compose up`
-2. **Ingest documents**: `uv run rag-api-ingest run` (MUST do this first!)
+2. **Ingest documents**: `uv run rag-api-ingest --query "topic" --max-docs 5` (MUST do this first!)
 3. **Query the system**:
    - **Via API**: `curl -X POST http://localhost:9010/query -H "Content-Type: application/json" -d '{"question": "your question"}'`
    - **Via LangGraph Dev**: `uv run langgraph dev` then open http://localhost:8123
