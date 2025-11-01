@@ -18,3 +18,8 @@ wheels/
 # Miscellaneous
 .DS_Store
 .env
+
+# Backup files (may contain secrets)
+.env.bak*
+*.bak
+*.bak2

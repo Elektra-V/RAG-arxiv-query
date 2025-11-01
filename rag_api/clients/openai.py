@@ -93,6 +93,17 @@ def create_openai_client(
             f"(base_url={base_url}, username={username})"
         )
     
+    # Add OpenRouter optional headers if base_url is OpenRouter
+    if base_url and "openrouter.ai" in base_url:
+        settings = get_settings()
+        if settings.openrouter_http_referer:
+            default_headers["HTTP-Referer"] = settings.openrouter_http_referer
+        if settings.openrouter_x_title:
+            default_headers["X-Title"] = settings.openrouter_x_title
+        
+        if default_headers.get("HTTP-Referer") or default_headers.get("X-Title"):
+            logger.debug("Configured OpenRouter optional headers for rankings")
+    
     # Create OpenAI client following exact company API pattern
     client = OpenAI(
         api_key=api_key,

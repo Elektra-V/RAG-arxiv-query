@@ -32,6 +32,10 @@ class Settings(BaseSettings):
     openai_base_url: Optional[str] = None  # Custom base URL for company APIs
     openai_auth_username: Optional[str] = None  # Basic auth username
     openai_auth_password: Optional[str] = None  # Basic auth password
+    
+    # OpenRouter optional headers (for rankings)
+    openrouter_http_referer: Optional[str] = None  # Optional: Your site URL
+    openrouter_x_title: Optional[str] = None  # Optional: Your site name
 
     # Anthropic configuration
     anthropic_api_key: Optional[str] = None
