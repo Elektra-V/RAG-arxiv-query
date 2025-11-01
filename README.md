@@ -4,6 +4,17 @@
 
 ---
 
+## 🚀 Setup Options
+
+**New!** Test locally first with **free APIs** (no company credentials needed):
+- See `SETUP_LOCAL_TEST.md` for quick local testing setup
+- Use free Groq/Together AI + HuggingFace embeddings
+- Once working, just swap env vars for company API!
+
+**Or** proceed with company API setup below.
+
+---
+
 ## 🚀 Setup (Choose One: Docker or Local)
 
 ### Option A: Docker (Recommended - Everything in Containers)

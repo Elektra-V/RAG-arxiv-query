@@ -2,6 +2,9 @@
   "graphs": {
     "rag_agent": "rag_api.services.langchain.graph:graph"
   },
+  "dependencies": [
+    "rag_api"
+  ],
   "env": ".env"
 }
 
