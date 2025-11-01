@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from base64 import b64encode
 from functools import lru_cache
 
 from llama_index.core import Settings as LISettings
@@ -51,11 +52,44 @@ def get_llamaindex_embedding() -> BaseEmbedding:
                 "Install it with: uv add llama-index-embeddings-openai"
             )
         # API key can be provided via env var OPENAI_API_KEY or explicitly
-        api_key = settings.openai_api_key  # None if not set, SDK will use OPENAI_API_KEY env var
-        return OpenAIEmbedding(
-            model=settings.openai_embedding_model,
-            api_key=api_key,
-        )
+        api_key = settings.openai_api_key or "xxxx"  # Use placeholder if not set (for company APIs)
+        
+        # Build custom headers for company API Basic auth
+        default_headers = {}
+        if settings.openai_auth_username and settings.openai_auth_password:
+            token_string = f"{settings.openai_auth_username}:{settings.openai_auth_password}"
+            token_bytes = b64encode(token_string.encode())
+            default_headers["Authorization"] = f"Basic {token_bytes.decode()}"
+        
+        # Create client kwargs
+        client_kwargs = {
+            "model": settings.openai_embedding_model,
+            "api_key": api_key,
+        }
+        
+        # Add custom base URL if provided (for company APIs)
+        if settings.openai_base_url:
+            client_kwargs["api_base"] = settings.openai_base_url
+        
+        # Add default headers if Basic auth is configured
+        if default_headers:
+            try:
+                from openai import OpenAI as OpenAIClient
+                openai_client = OpenAIClient(
+                    api_key=api_key,
+                    base_url=settings.openai_base_url or "https://api.openai.com/v1",
+                    default_headers=default_headers,
+                )
+                client_kwargs["client"] = openai_client
+            except ImportError:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.warning(
+                    "Custom auth headers configured but 'openai' package not available. "
+                    "Install 'openai' package to enable Basic auth support."
+                )
+        
+        return OpenAIEmbedding(**client_kwargs)
 
     elif settings.embedding_provider == "huggingface":
         if HuggingFaceEmbedding is None:
@@ -83,12 +117,46 @@ def get_llamaindex_llm() -> LLM:
                 "Install it with: uv add llama-index-llms-openai"
             )
         # API key can be provided via env var OPENAI_API_KEY or explicitly
-        api_key = settings.openai_api_key  # None if not set, SDK will use OPENAI_API_KEY env var
-        return OpenAI(
-            model=settings.openai_model,
-            api_key=api_key,
-            temperature=0,
-        )
+        api_key = settings.openai_api_key or "xxxx"  # Use placeholder if not set (for company APIs)
+        
+        # Build custom headers for company API Basic auth
+        default_headers = {}
+        if settings.openai_auth_username and settings.openai_auth_password:
+            token_string = f"{settings.openai_auth_username}:{settings.openai_auth_password}"
+            token_bytes = b64encode(token_string.encode())
+            default_headers["Authorization"] = f"Basic {token_bytes.decode()}"
+        
+        # Create client kwargs
+        client_kwargs = {
+            "model": settings.openai_model,
+            "api_key": api_key,
+            "temperature": 0,
+        }
+        
+        # Add custom base URL if provided (for company APIs)
+        if settings.openai_base_url:
+            client_kwargs["api_base"] = settings.openai_base_url
+        
+        # Add default headers if Basic auth is configured
+        if default_headers:
+            # LlamaIndex's OpenAI uses OpenAI SDK which supports default_headers
+            try:
+                from openai import OpenAI as OpenAIClient
+                openai_client = OpenAIClient(
+                    api_key=api_key,
+                    base_url=settings.openai_base_url or "https://api.openai.com/v1",
+                    default_headers=default_headers,
+                )
+                client_kwargs["client"] = openai_client
+            except ImportError:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.warning(
+                    "Custom auth headers configured but 'openai' package not available. "
+                    "Install 'openai' package to enable Basic auth support."
+                )
+        
+        return OpenAI(**client_kwargs)
 
     elif settings.llm_provider == "anthropic":
         if Anthropic is None:

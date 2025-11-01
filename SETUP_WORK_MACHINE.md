@@ -58,6 +58,29 @@ LANGSMITH_API_KEY="your-key-here"
 LANGSMITH_TRACING=true
 ```
 
+### With Company API (Custom OpenAI-Compatible with Basic Auth)
+
+For company APIs like Fraunhofer GenAI that use Basic authentication:
+
+```env
+# Model provider
+LLM_PROVIDER="openai"
+EMBEDDING_PROVIDER="openai"
+
+# Company API configuration
+OPENAI_BASE_URL="https://genai.iais.fraunhofer.de/api/v2"
+OPENAI_AUTH_USERNAME="my-username"
+OPENAI_AUTH_PASSWORD="my-password"
+OPENAI_API_KEY="xxxx"  # Can be placeholder, Basic auth handles authentication
+OPENAI_MODEL="Llama-3-SauerkrautLM"  # Your company's model name
+```
+
+The code automatically:
+- Encodes username:password as Base64
+- Adds `Authorization: Basic <token>` header to all requests
+- Uses the custom base URL instead of OpenAI's default
+- Works with both LangChain and LlamaIndex services
+
 ## Important Notes
 
 ### API Key Handling

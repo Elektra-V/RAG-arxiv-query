@@ -27,6 +27,9 @@ class Settings(BaseSettings):
     openai_api_key: Optional[str] = None
     openai_model: str = "gpt-4o-mini"
     openai_embedding_model: str = "text-embedding-3-small"
+    openai_base_url: Optional[str] = None  # Custom base URL for company APIs
+    openai_auth_username: Optional[str] = None  # Basic auth username
+    openai_auth_password: Optional[str] = None  # Basic auth password
 
     # Anthropic configuration
     anthropic_api_key: Optional[str] = None

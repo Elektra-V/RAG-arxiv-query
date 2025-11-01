@@ -32,6 +32,24 @@ OLLAMA_SOCKET=/var/run/ollama.sock
 OLLAMA_MODEL_VOLUME=ollama-models
 ```
 
+### Company API Configuration
+
+For custom OpenAI-compatible APIs (like Fraunhofer GenAI) that use Basic authentication:
+
+```env
+LLM_PROVIDER="openai"
+EMBEDDING_PROVIDER="openai"
+
+# Company API settings
+OPENAI_BASE_URL="https://genai.iais.fraunhofer.de/api/v2"
+OPENAI_AUTH_USERNAME="your-username"
+OPENAI_AUTH_PASSWORD="your-password"
+OPENAI_API_KEY="xxxx"  # Can be placeholder when using Basic auth
+OPENAI_MODEL="Llama-3-SauerkrautLM"  # Your company's model name
+```
+
+The system automatically handles Base64 encoding and adds the `Authorization: Basic <token>` header to all requests.
+
 Install dependencies via `uv`:
 
 ```bash
