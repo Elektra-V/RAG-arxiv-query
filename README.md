@@ -56,7 +56,9 @@ uv run python check_company_models.py
 
 ### Option 2: Local Testing (Free APIs)
 
-**⚠️ IMPORTANT: OpenRouter requires credits!** If you see a 402 error, your account needs credits.
+**⚠️ IMPORTANT NOTES:**
+- **402 Error**: OpenRouter requires credits for paid models
+- **429 Error**: Free models are rate-limited (wait 2-3 minutes or switch to Together AI)
 
 **Option 2A: Together AI (Free Tier - Recommended)**
 1. Go to: https://together.ai/
