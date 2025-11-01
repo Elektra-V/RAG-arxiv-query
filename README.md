@@ -1,376 +1,231 @@
-# RAG API - Quick Start Guide
+# RAG API - Complete Guide
 
-**One README. Everything you need to run this project.**
-
----
-
-## 🚀 Setup Options
-
-**New!** Test locally first with **free APIs** (no company credentials needed):
-- See `SETUP_LOCAL_TEST.md` for quick local testing setup
-- Use free Groq/Together AI + HuggingFace embeddings
-- Once working, just swap env vars for company API!
-
-**Or** proceed with company API setup below.
+**Everything you need in one place. Simple and clear.**
 
 ---
 
-## 🚀 Setup (Choose One: Docker or Local)
+## 🚀 Quick Start (3 Steps)
 
-### Option A: Docker (Recommended - Everything in Containers)
-
-#### Step 1: Copy Configuration File
+### 1. Setup Configuration
 ```bash
 cp env.example .env
+# Edit .env with your API credentials (see below)
 ```
 
-#### Step 2: Edit `.env` File
-Open `.env` and replace these lines with your actual credentials:
+### 2. Start Services
+```bash
+# Option A: Docker (easiest - handles everything)
+docker compose up --build
 
+# Option B: Local (for debugging)
+uv sync
+docker run -d -p 6334:6333 qdrant/qdrant
+uv run langgraph dev  # Opens UI at http://localhost:8123
+```
+
+### 3. Ingest Documents (Required Before Querying!)
+```bash
+uv run rag-api-ingest --query "quantum computing" --max-docs 5
+```
+
+**Done!** Now you can query: http://localhost:9010/docs
+
+---
+
+## 📝 Configuration (.env file)
+
+Open `.env` and configure one of these options:
+
+### Option 1: Company API (Production)
 ```env
-OPENAI_BASE_URL="https://genai.iais.fraunhofer.de/api/v2"
-OPENAI_AUTH_USERNAME="your-actual-username"
-OPENAI_AUTH_PASSWORD="your-actual-password"
-OPENAI_API_KEY="xxxx"
-OPENAI_MODEL="gpt-4"  # or "gpt-4o", "gpt-4o-mini", etc.
 LLM_PROVIDER="openai"
 EMBEDDING_PROVIDER="openai"
+OPENAI_BASE_URL="https://genai.iais.fraunhofer.de/api/v2"
+OPENAI_AUTH_USERNAME="your-username"
+OPENAI_AUTH_PASSWORD="your-password"
+OPENAI_API_KEY="xxxx"
+OPENAI_MODEL="gpt-4"
+OPENAI_EMBEDDING_MODEL="text-embedding-3-small"
 ```
 
-**Important**: Use your real username and password from your company.
-
-#### Step 3: Start Services
-
-**Option 1: Use Docker Compose** (Recommended - Handles everything):
-```bash
-# First time or if you see "orphan containers" warning, use:
-docker compose up --build --remove-orphans
-
-# Or for normal use:
-docker compose up --build
-```
-This automatically:
-- Installs all dependencies using UV inside containers
-- Starts Qdrant on port 6334
-- Starts LangChain API on port 9010
-- Starts LlamaIndex API on port 9020
-- Everything is self-contained!
-
-**Option 2: Use LangGraph Dev Locally** (For debugging):
-
-⚠️ **IMPORTANT**: 
-- **Don't start Qdrant separately** if Docker Compose is already running!
-- Docker Compose already started Qdrant on port 6334
-- Just use the Qdrant that's already running
-
-**Install dependencies:**
-```bash
-uv sync  # CRITICAL - must do this FIRST!
-```
-
-**Then start LangGraph Dev:**
-```bash
-uv run langgraph dev
-```
-This will use `langgraph.json` config file to find your graph.
-Open: **http://localhost:8123** - Beautiful built-in UI!
-
-**Note**: If Docker Compose is NOT running and you want to use LangGraph Dev:
-```bash
-# First start Qdrant
-docker run -d -p 6334:6333 qdrant/qdrant
-
-# Then start langgraph dev
-uv run langgraph dev
-```
-
-#### Step 4: Ingest Documents (IMPORTANT - Do This First!)
-**Before querying, you need to populate Qdrant with documents:**
-
-**Option A: Using API (recommended):**
-```bash
-curl -X POST http://localhost:9030/ingest \
-  -H "Content-Type: application/json" \
-  -d '{"query": "quantum computing", "max_docs": 5}'
-```
-
-**Option B: Using CLI:**
-```bash
-# If running locally (not Docker)
-uv run rag-api-ingest --query "quantum computing" --max-docs 5
-
-# Or use defaults from .env (no arguments needed, but --query recommended)
-uv run rag-api-ingest --query "quantum computing"
-```
-
-**This will:**
-- Download arXiv papers matching your query
-- Create embeddings using your configured embedding model
-- Store them in Qdrant for RAG queries
-
-**Check if it worked:**
-```bash
-curl http://localhost:9010/status | grep collections
-# Should show collections: ["arxiv_papers"] instead of []
-```
-
-#### Step 5: Open Browser and Test
-- **LangChain API**: http://localhost:9010/ (query endpoint)
-- **LangChain Docs**: http://localhost:9010/docs
-- **LlamaIndex UI**: http://localhost:9020/ (debug interface)
-- **LangGraph Dev UI**: http://localhost:8123 (if using langgraph dev)
-
----
-
-### Option B: Local (Without Docker)
-
-#### Step 1: Copy Configuration File
-```bash
-cp env.example .env
-```
-
-#### Step 2: Edit `.env` File
-Same as Docker option above.
-
-#### Step 3: Check Available Models
+**Check available models:**
 ```bash
 uv run python check_company_models.py
 ```
 
-This shows available models. Update `OPENAI_MODEL` in `.env` if needed.
+### Option 2: Local Testing (Free APIs)
 
-#### Step 4: Install Dependencies
-```bash
-uv sync
+**Get free API key from Together AI** (2 minutes):
+1. Go to: https://together.ai/
+2. Sign up → Get API key
+3. Add to `.env`:
+
+```env
+LLM_PROVIDER="openai"
+EMBEDDING_PROVIDER="huggingface"  # FREE - no key needed!
+OPENAI_BASE_URL="https://api.together.xyz/v1"
+OPENAI_API_KEY="your-together-key"
+OPENAI_MODEL="meta-llama/Llama-3-8b-chat-hf"
+HUGGINGFACE_MODEL="sentence-transformers/all-MiniLM-L6-v2"
 ```
 
-#### Step 5: Start Qdrant (if not using Docker)
-**Only if Docker Compose is NOT running!** If Docker Compose is running, skip this step.
-
-```bash
-# Using port 6334 to avoid conflicts with original project
-docker run -d -p 6334:6333 qdrant/qdrant
-```
-**Important**: Update `QDRANT_URL="http://localhost:6334"` in your `.env` file.
-
-#### Step 6: Ingest Documents (CRITICAL - Do This Before Querying!)
-**Your Qdrant database is empty! You need to populate it first:**
-
-```bash
-# Option 1: Using CLI (recommended)
-uv run rag-api-ingest --query "quantum computing" --max-docs 5
-
-# Option 2: Using defaults from .env (query from .env file)
-uv run rag-api-ingest --max-docs 5
-
-# Option 3: Using API endpoint (if ingestion service is running)
-curl -X POST http://localhost:9030/ingest \
-  -H "Content-Type: application/json" \
-  -d '{"query": "quantum computing", "max_docs": 5}'
+### Option 3: Test Ingestion Only (No LLM API Key)
+```env
+LLM_PROVIDER="openai"  # Not used for ingestion
+EMBEDDING_PROVIDER="huggingface"  # FREE!
+HUGGINGFACE_MODEL="sentence-transformers/all-MiniLM-L6-v2"
+OPENAI_API_KEY=""  # Leave empty
 ```
 
-**This downloads arXiv papers, creates embeddings, and stores them in Qdrant.**
+This tests: Download papers → Create embeddings → Store in Qdrant  
+(No LLM querying, but ingestion works!)
 
-**Verify it worked:**
+---
+
+## 📖 Complete Workflow
+
+### Step 1: Ingest Documents (MUST DO FIRST!)
+
+**Your database is empty!** Populate it:
+
+```bash
+uv run rag-api-ingest --query "machine learning" --max-docs 5
+```
+
+**What happens:**
+- Downloads arXiv papers
+- Creates embeddings
+- Stores in Qdrant
+
+**Verify:**
 ```bash
 curl http://localhost:9010/status | grep collections
-# Should show: "collections":["arxiv_papers"] instead of []
+# Should show: ["arxiv_papers"] instead of []
 ```
 
-#### Step 7: Start with LangGraph Dev (Optional - Better UI)
+### Step 2: Query the System
+
+**Option A: Via API**
+```bash
+curl -X POST http://localhost:9010/query \
+  -H "Content-Type: application/json" \
+  -d '{"question": "What is quantum computing?", "debug": true}'
+```
+
+**Option B: Via LangGraph Dev (Best for debugging)**
 ```bash
 uv run langgraph dev
+# Opens UI at http://localhost:8123 - interactive debugging!
 ```
-This uses `langgraph.json` config file (already created).
 
-This gives you:
-- Beautiful UI for debugging at http://localhost:8123
-- Real-time logs and traces
-- Step-by-step execution view
-- Much better than terminal!
+**Option C: Via Web UI**
+- LangChain API: http://localhost:9010/docs
+- LlamaIndex UI: http://localhost:9020/
 
-**Alternative**: If you want the API server instead:
+### Step 3: Debug & Check Status
+
 ```bash
-uv run rag_api/services/langchain/app.py
+# Detailed system info
+curl http://localhost:9010/debug | jq '.'
+
+# Check service status
+curl http://localhost:9010/status
+
+# Check Qdrant
+curl http://localhost:6334/collections
 ```
-Then access: http://localhost:9010/
-
----
-
-## 🎨 LangGraph Dev (Built-in Debugging UI)
-
-**LangGraph Dev** is the official tool from LangGraph - gives you a beautiful UI for debugging without building anything yourself!
-
-### Using LangGraph Dev:
-
-⚠️ **IMPORTANT**: Install dependencies first!
-```bash
-uv sync  # Must do this FIRST!
-```
-
-**Then start it:**
-```bash
-uv run langgraph dev
-```
-This uses the `langgraph.json` configuration file.
-
-**Access the UI:**
-- Open: http://localhost:8123 (or the port shown in terminal)
-- Interactive UI to test your agent
-- See logs, traces, and execution flow
-- Step-by-step debugging
-- All built-in - no custom code needed!
-
-**Optional: LangSmith Integration** (for cloud tracing):
-1. Get API key from https://smith.langchain.com/
-2. Add to `.env`:
-   ```env
-   LANGSMITH_API_KEY="your-key"
-   LANGSMITH_TRACING=true
-   ```
-3. Traces will also appear in LangSmith cloud dashboard
-
-**Note**: `langgraph dev` is included when you run `uv sync`. No extra installation needed!
-
----
-
-## 📝 Quick Reference
-
-**Docker commands:**
-- Start everything: `docker compose up --build`
-- Start and clean orphans: `docker compose up --build --remove-orphans`
-- Stop everything: `docker compose down`
-- Stop and remove volumes: `docker compose down -v`
-- View logs: `docker compose logs -f langchain`
-
-**LangGraph Dev** (recommended for debugging):
-- **First**: `uv sync` (install dependencies)
-- **Then**: `uv run langgraph dev` (uses langgraph.json config)
-- UI: http://localhost:8123
-- **Note**: If Docker Compose is running, Qdrant is already available - don't start it again!
-
-**API Server** (for production/testing):
-- Start: `uv run rag_api/services/langchain/app.py`
-- API: http://localhost:9010/ (changed from 8009)
-- Docs: http://localhost:9010/docs
-
-**Ingestion commands:**
-- **Ingest documents** (must do this first!): `uv run rag-api-ingest --query "topic" --max-docs 5`
-- **Ingest via API**: `curl -X POST http://localhost:9030/ingest -H "Content-Type: application/json" -d '{"query": "quantum computing", "max_docs": 5}'`
-- **Check status**: `curl http://localhost:9010/status` (look for collections in response)
-
-**Debugging:**
-- **Detailed debug info**: `curl http://localhost:9010/debug | jq '.'` (shows everything!)
-- **Check models**: `uv run python check_company_models.py`
-- **Check Qdrant**: `curl http://localhost:6334/collections` (should show arxiv_papers)
-- **View logs**: `docker compose logs -f langchain` (or check terminal if running locally)
-
-**Note**: Ports changed to 9000+ range to avoid conflicts with original project:
-- LangChain: 9010 (was 8009)
-- LlamaIndex: 9020 (was 8080)
-- Ingestion: 9030 (was 8090)
-- Qdrant: 6334 (was 6333)
 
 ---
 
 ## 🔧 Troubleshooting
 
 **"Connection failed"**
-- Run `check_company_models.py` to test your credentials
-- Make sure username and password in `.env` are correct
+- Check credentials in `.env`
+- Test with: `uv run python check_company_models.py`
 
 **"Model not found"**
-- Run `check_company_models.py` to see available models
-- Update `OPENAI_MODEL` in `.env` with one from the list
+- List models: `uv run python check_company_models.py`
+- Update `OPENAI_MODEL` in `.env`
 
-**"Service won't start" / "Module not found" / "Command not found"**
-- **CRITICAL**: Did you run `uv sync` first? This installs all dependencies!
-- For Docker: `docker compose up --build` installs dependencies automatically
-- For local: Must run `uv sync` before `langgraph dev` or any service
-- Make sure `.env` file exists
-- Look at the error message in terminal
+**"port is already allocated"**
+- Docker Compose already started Qdrant - don't start it again!
+- Or stop everything: `docker compose down`
+
+**"collections": [] - Empty database**
+- **You must ingest documents first!**
+- Run: `uv run rag-api-ingest --query "topic" --max-docs 5`
 
 **"langgraph: command not found"**
-- Run `uv sync` first to install dependencies
-- Then use `uv run langgraph dev ...` instead of just `langgraph dev`
+- Run: `uv sync` first
+- Then use: `uv run langgraph dev`
 
-**"port is already allocated" / "Bind failed"**
-- **If Docker Compose is running**: Don't start Qdrant separately! It's already running.
-- **If you want to stop everything first**: `docker compose down`
-- **If you need Qdrant separately**: Stop Docker Compose first, or use a different port
-- Find what's using the port:
-  ```bash
-  docker ps | grep 6334  # Find container using port 6334
-  docker stop <container-id>  # Stop it
-  ```
-
-**"No such option: --graph"**
-- Use `uv run langgraph dev` (without `--graph` flag)
-- The project includes `langgraph.json` which configures the graph automatically
-
-**"Required package 'langgraph-api' is not installed"**
-- Run: `uv add "langgraph-cli[inmem]"` (this explicitly adds the inmem extra)
-- Or: `uv sync` should install it, but if not, use the add command above
-- The `[inmem]` extra is required for `langgraph dev` to work
-
-**"collections": [] - Qdrant is empty**
-- **You need to ingest documents first!**
-- Run: `uv run rag-api-ingest --query "quantum computing" --max-docs 5`
-- Or use API: `curl -X POST http://localhost:9030/ingest -H "Content-Type: application/json" -d '{"query": "quantum computing", "max_docs": 5}'`
-- Without documents, queries will return no results
-
-**Ingestion endpoint returns 404**
-- Ingestion service endpoint is `/ingest` not `/`
-- Use: `curl -X POST http://localhost:9030/ingest`
-- Check if service is running: `docker compose ps` or `curl http://localhost:9030/ingest` (should return method not allowed, not 404)
-
-**"Found orphan containers" warning**
-- Use `--remove-orphans` flag:
-  ```bash
-  docker compose up --build --remove-orphans
-  ```
-- This cleans up old containers from previous configurations
+**"Module not found"**
+- **CRITICAL**: Run `uv sync` before starting services!
 
 ---
 
-## 📂 What This Project Does
-
-- **LangChain Service** (port 9010): Agent with RAG + web search
-- **LlamaIndex Service** (port 9020): Direct RAG queries
-- Both connect to your company's LLM API
-- Both use Qdrant for document storage (port 6334)
-
----
-
----
-
-## 📖 How to Use This System (Complete Workflow)
-
-**See `USAGE_WORKFLOW.md` for detailed step-by-step usage guide.**
-
-### Quick Summary:
+## 📂 Project Structure
 
 ```
-1. Setup → 2. Ingest Documents → 3. Query → 4. Debug
+rag-api/
+├── .env                      # Your configuration (copy from env.example)
+├── README.md                 # This file - everything you need!
+├── env.example               # Configuration template
+├── pyproject.toml            # Dependencies
+├── docker-compose.yml        # Docker setup
+├── langgraph.json            # LangGraph config
+├── check_company_models.py    # List available models
+├── check_setup.py            # Verify your setup
+└── rag_api/                  # Source code
+    ├── settings.py           # Configuration
+    ├── clients/              # API clients (OpenAI, Qdrant)
+    ├── ingestion/           # Document ingestion
+    └── services/            # API services (LangChain, LlamaIndex)
 ```
-
-**Complete workflow:**
-1. **Start services**: `docker compose up`
-2. **Ingest documents**: `uv run rag-api-ingest --query "topic" --max-docs 5` (MUST do this first!)
-3. **Query the system**:
-   - **Via API**: `curl -X POST http://localhost:9010/query -H "Content-Type: application/json" -d '{"question": "your question"}'`
-   - **Via LangGraph Dev**: `uv run langgraph dev` then open http://localhost:8123
-   - **Via LlamaIndex UI**: http://localhost:9020/
-
-**Important**: Without ingested documents, queries will return no results!
 
 ---
 
-## 🎯 That's It!
+## 🎯 What This Project Does
 
-Follow the setup steps above. Then see `USAGE_WORKFLOW.md` for complete usage guide.
+- **Downloads** arXiv papers based on query
+- **Creates embeddings** (vector representations)
+- **Stores** in Qdrant (vector database)
+- **Queries** using RAG (Retrieval Augmented Generation)
+- **Answers** questions using LLM + retrieved context
 
-**Need help?** 
-- Check `USAGE_WORKFLOW.md` for detailed workflow
-- Use `/debug` endpoint: `curl http://localhost:9010/debug` for detailed system info
-- Check the Troubleshooting section below
+**Services:**
+- LangChain API (port 9010): RAG agent with web search
+- LlamaIndex API (port 9020): Direct RAG queries
+- Ingestion (port 9030): Document processing
+- Qdrant (port 6334): Vector database
+
+---
+
+## 🚀 Docker Commands
+
+```bash
+# Start everything
+docker compose up --build
+
+# Stop everything
+docker compose down
+
+# View logs
+docker compose logs -f langchain
+
+# Clean start (remove old containers)
+docker compose up --build --remove-orphans
+```
+
+---
+
+## 💡 Tips
+
+- **Start with ingestion-only testing** (no LLM key needed) to verify pipeline
+- **Use LangGraph Dev** (`uv run langgraph dev`) for best debugging experience
+- **Check status** with `/debug` endpoint for detailed system info
+- **Ports changed** to 9000+ range to avoid conflicts
+
+---
+
+**Need help?** Check troubleshooting section above or use `/debug` endpoint!
