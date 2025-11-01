@@ -87,10 +87,22 @@ OLLAMA_BASE_URL="http://localhost:11434"
 HUGGINGFACE_MODEL="sentence-transformers/all-MiniLM-L6-v2"
 ```
 
-**Option 2C: OpenRouter (Requires Credits)**
-- Go to: https://openrouter.ai/settings/credits
-- Purchase credits (minimum ~$5-10)
-- Then use current config
+**Option 2C: OpenRouter (Free Model Available!)**
+- **FREE model**: `qwen/qwen3-coder:free` (no credits needed!)
+- Sign up at: https://openrouter.ai/ (free account)
+- Get API key from dashboard
+- Add to `.env`:
+
+```env
+LLM_PROVIDER="openai"
+EMBEDDING_PROVIDER="huggingface"
+OPENAI_BASE_URL="https://openrouter.ai/api/v1"
+OPENAI_API_KEY="your-openrouter-key"
+OPENAI_MODEL="qwen/qwen3-coder:free"  # FREE!
+HUGGINGFACE_MODEL="sentence-transformers/all-MiniLM-L6-v2"
+```
+
+**Note**: Some OpenRouter models require credits, but `qwen/qwen3-coder:free` is completely free!
 
 ### Option 3: Test Ingestion Only (No LLM API Key)
 ```env
