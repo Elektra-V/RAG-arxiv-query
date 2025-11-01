@@ -56,10 +56,13 @@ uv run python check_company_models.py
 
 ### Option 2: Local Testing (Free APIs)
 
-**Get free API key from Together AI** (2 minutes):
+**⚠️ IMPORTANT: OpenRouter requires credits!** If you see a 402 error, your account needs credits.
+
+**Option 2A: Together AI (Free Tier - Recommended)**
 1. Go to: https://together.ai/
-2. Sign up → Get API key
-3. Add to `.env`:
+2. Sign up (no credit card for free tier)
+3. Get API key from dashboard
+4. Add to `.env`:
 
 ```env
 LLM_PROVIDER="openai"
@@ -69,6 +72,25 @@ OPENAI_API_KEY="your-together-key"
 OPENAI_MODEL="meta-llama/Llama-3-8b-chat-hf"
 HUGGINGFACE_MODEL="sentence-transformers/all-MiniLM-L6-v2"
 ```
+
+**Option 2B: Ollama (100% Free, Local)**
+1. Install: `brew install ollama` (or see https://ollama.ai/)
+2. Start: `ollama serve`
+3. Pull model: `ollama pull llama3.1:8b`
+4. Add to `.env`:
+
+```env
+LLM_PROVIDER="ollama"
+EMBEDDING_PROVIDER="huggingface"  # FREE!
+OLLAMA_MODEL="llama3.1:8b-instruct-q4_0"
+OLLAMA_BASE_URL="http://localhost:11434"
+HUGGINGFACE_MODEL="sentence-transformers/all-MiniLM-L6-v2"
+```
+
+**Option 2C: OpenRouter (Requires Credits)**
+- Go to: https://openrouter.ai/settings/credits
+- Purchase credits (minimum ~$5-10)
+- Then use current config
 
 ### Option 3: Test Ingestion Only (No LLM API Key)
 ```env
