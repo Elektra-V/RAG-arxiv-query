@@ -30,25 +30,34 @@ EMBEDDING_PROVIDER="openai"
 
 #### Step 3: Start Services
 
-**Option 1: Use LangGraph Dev** (Recommended - Best UI):
-```bash
-# Make sure Qdrant is running first (using port 6334 to avoid conflicts)
-docker run -d -p 6334:6333 qdrant/qdrant
-
-# Then start LangGraph Dev
-langgraph dev --graph rag_api.services.langchain.graph:graph
-```
-Open: **http://localhost:8123** - Beautiful built-in UI!
-
-**Option 2: Use Docker Compose** (For full stack):
+**Option 1: Use Docker Compose** (Recommended - Handles everything):
 ```bash
 docker compose up --build
 ```
-This starts:
-- Qdrant on port **6334** (changed to avoid conflicts)
-- LangChain API on port **9010** (changed from 8009)
-- LlamaIndex API on port **9020** (changed from 8080)
-- Ingestion API on port **9030** (changed from 8010)
+This automatically:
+- Installs all dependencies using UV inside containers
+- Starts Qdrant on port 6334
+- Starts LangChain API on port 9010
+- Starts LlamaIndex API on port 9020
+- Everything is self-contained!
+
+**Option 2: Use LangGraph Dev Locally** (For debugging):
+
+⚠️ **IMPORTANT**: You MUST install dependencies first!
+```bash
+uv sync  # CRITICAL - must do this FIRST before anything else!
+```
+
+**Then start Qdrant:**
+```bash
+docker run -d -p 6334:6333 qdrant/qdrant
+```
+
+**Then start LangGraph Dev:**
+```bash
+uv run langgraph dev --graph rag_api.services.langchain.graph:graph
+```
+Open: **http://localhost:8123** - Beautiful built-in UI!
 
 #### Step 4: Open Browser
 - **LangGraph Dev UI**: http://localhost:8123 (if using langgraph dev)
@@ -112,9 +121,14 @@ Then access: http://localhost:8009/
 
 ### Using LangGraph Dev:
 
-**Start it:**
+⚠️ **IMPORTANT**: Install dependencies first!
 ```bash
-langgraph dev --graph rag_api.services.langchain.graph:graph
+uv sync  # Must do this FIRST!
+```
+
+**Then start it:**
+```bash
+uv run langgraph dev --graph rag_api.services.langchain.graph:graph
 ```
 
 **Access the UI:**
@@ -145,7 +159,8 @@ langgraph dev --graph rag_api.services.langchain.graph:graph
 - View logs: `docker compose logs -f langchain`
 
 **LangGraph Dev** (recommended for debugging):
-- Start: `langgraph dev --graph rag_api.services.langchain.graph:graph`
+- **First**: `uv sync` (install dependencies)
+- **Then**: `uv run langgraph dev --graph rag_api.services.langchain.graph:graph`
 - UI: http://localhost:8123
 
 **API Server** (for production/testing):
@@ -175,19 +190,25 @@ langgraph dev --graph rag_api.services.langchain.graph:graph
 - Run `check_company_models.py` to see available models
 - Update `OPENAI_MODEL` in `.env` with one from the list
 
-**"Service won't start"**
+**"Service won't start" / "Module not found" / "Command not found"**
+- **CRITICAL**: Did you run `uv sync` first? This installs all dependencies!
+- For Docker: `docker compose up --build` installs dependencies automatically
+- For local: Must run `uv sync` before `langgraph dev` or any service
 - Make sure `.env` file exists
-- Check that you ran `uv sync`
 - Look at the error message in terminal
+
+**"langgraph: command not found"**
+- Run `uv sync` first to install dependencies
+- Then use `uv run langgraph dev ...` instead of just `langgraph dev`
 
 ---
 
 ## 📂 What This Project Does
 
-- **LangChain Service** (port 8009): Agent with RAG + web search
-- **LlamaIndex Service** (port 8080): Direct RAG queries
+- **LangChain Service** (port 9010): Agent with RAG + web search
+- **LlamaIndex Service** (port 9020): Direct RAG queries
 - Both connect to your company's LLM API
-- Both use Qdrant for document storage
+- Both use Qdrant for document storage (port 6334)
 
 ---
 
