@@ -75,11 +75,7 @@ def get_llm_model() -> BaseChatModel:
                 "langchain-openai is not installed. Install it with: uv add langchain-openai"
             )
         
-        # Use the centralized OpenAI client factory
-        # This handles Basic auth encoding and client creation according to company API pattern
         openai_client = get_openai_client()
-        
-        # Create LangChain ChatOpenAI wrapper with the configured client
         return ChatOpenAI(
             model=settings.openai_model,
             client=openai_client,
@@ -91,8 +87,7 @@ def get_llm_model() -> BaseChatModel:
             raise ImportError(
                 "langchain-anthropic is not installed. Install it with: uv add langchain-anthropic"
             )
-        # API key can be provided via env var ANTHROPIC_API_KEY or explicitly
-        api_key = settings.anthropic_api_key  # None if not set, SDK will use ANTHROPIC_API_KEY env var
+        api_key = settings.anthropic_api_key
         return ChatAnthropic(
             model=settings.anthropic_model,
             api_key=api_key,

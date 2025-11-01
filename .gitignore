@@ -21,5 +21,14 @@ wheels/
 
 # Backup files (may contain secrets)
 .env.bak*
+.env.backup*
 *.bak
 *.bak2
+*.backup
+*.swp
+*.tmp
+*~
+langgraph*.log
+langgraph*.pid
+api.log
+api.pid

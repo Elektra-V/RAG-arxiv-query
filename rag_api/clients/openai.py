@@ -68,20 +68,12 @@ def create_openai_client(
             "openai package is not installed. Install it with: uv add openai"
         )
     
-    # Use default values from settings if not provided
     settings = get_settings()
-    
-    # Handle empty strings as None for portability
     api_key = api_key or (settings.openai_api_key if settings.openai_api_key and settings.openai_api_key.strip() else None) or "xxxx"
     base_url = base_url or (settings.openai_base_url if settings.openai_base_url and settings.openai_base_url.strip() else None)
     username = username or (settings.openai_auth_username if settings.openai_auth_username and settings.openai_auth_username.strip() else None)
     password = password or (settings.openai_auth_password if settings.openai_auth_password and settings.openai_auth_password.strip() else None)
     
-    # Build default headers for Basic auth if credentials provided
-    # Follow EXACT pattern from company API documentation:
-    # 1. Create token_string: f"{username}:{password}"
-    # 2. Encode as Base64: b64encode(token_string.encode())
-    # 3. Add to headers: {"Authorization": f"Basic {token_bytes.decode()}"}
     default_headers = {}
     if username and password:
         token_string = f"{username}:{password}"
@@ -93,7 +85,6 @@ def create_openai_client(
             f"(base_url={base_url}, username={username})"
         )
     
-    # Add OpenRouter optional headers if base_url is OpenRouter
     if base_url and "openrouter.ai" in base_url:
         settings = get_settings()
         if settings.openrouter_http_referer:
@@ -104,7 +95,6 @@ def create_openai_client(
         if default_headers.get("HTTP-Referer") or default_headers.get("X-Title"):
             logger.debug("Configured OpenRouter optional headers for rankings")
     
-    # Create OpenAI client following exact company API pattern
     client = OpenAI(
         api_key=api_key,
         default_headers=default_headers if default_headers else None,

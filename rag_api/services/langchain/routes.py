@@ -45,22 +45,19 @@ def _extract_tools_from_messages(messages: Iterable[Any]) -> list[str]:
     """Extract tool names used from agent messages."""
     tools_used = []
     for message in messages:
-        # Check for tool calls in LangGraph agent messages
         if hasattr(message, "tool_calls") and message.tool_calls:
             for tool_call in message.tool_calls:
                 if hasattr(tool_call, "name"):
                     tools_used.append(tool_call.name)
                 elif isinstance(tool_call, dict):
                     tools_used.append(tool_call.get("name", "unknown"))
-        # Also check message content for tool usage patterns
         content = getattr(message, "content", "")
         if isinstance(content, str) and "tool" in content.lower():
-            # Try to extract tool name from content
             if "rag_query" in content:
                 tools_used.append("rag_query")
             if "web_search" in content or "DuckDuckGo" in content:
                 tools_used.append("web_search")
-    return list(set(tools_used))  # Remove duplicates
+    return list(set(tools_used))
 
 
 def _content_from_messages(messages: Iterable[Any]) -> str:
@@ -68,12 +65,11 @@ def _content_from_messages(messages: Iterable[Any]) -> str:
     for message in reversed(list(messages)):
         content = getattr(message, "content", None)
         if isinstance(content, str) and content.strip():
-            # Skip tool call messages, get final answer
             if hasattr(message, "type") and message.type == "ai":
                 return content
             elif not hasattr(message, "tool_calls") or not message.tool_calls:
                 return content
-        if isinstance(content, list):  # structured content from some models
+        if isinstance(content, list):
             text_parts = [
                 part.get("text", "") for part in content if isinstance(part, dict)
             ]
