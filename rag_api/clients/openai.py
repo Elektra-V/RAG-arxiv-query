@@ -71,10 +71,11 @@ def create_openai_client(
     # Use default values from settings if not provided
     settings = get_settings()
     
-    api_key = api_key or settings.openai_api_key or "xxxx"
-    base_url = base_url or settings.openai_base_url
-    username = username or settings.openai_auth_username
-    password = password or settings.openai_auth_password
+    # Handle empty strings as None for portability
+    api_key = api_key or (settings.openai_api_key if settings.openai_api_key and settings.openai_api_key.strip() else None) or "xxxx"
+    base_url = base_url or (settings.openai_base_url if settings.openai_base_url and settings.openai_base_url.strip() else None)
+    username = username or (settings.openai_auth_username if settings.openai_auth_username and settings.openai_auth_username.strip() else None)
+    password = password or (settings.openai_auth_password if settings.openai_auth_password and settings.openai_auth_password.strip() else None)
     
     # Build default headers for Basic auth if credentials provided
     # Follow EXACT pattern from company API documentation:

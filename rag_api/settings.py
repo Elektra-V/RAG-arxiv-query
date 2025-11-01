@@ -16,7 +16,9 @@ class Settings(BaseSettings):
     arxiv_query: str = "quantum computing"
     arxiv_max_docs: int = 5
 
-    qdrant_url: str = "http://qdrant:6333"
+    # Qdrant URL - defaults to localhost for portability
+    # Docker Compose will override this via environment variable
+    qdrant_url: str = "http://localhost:6334"
     qdrant_collection: str = "arxiv_papers"
 
     # Model provider selection: "ollama", "openai", "anthropic", etc.
@@ -39,8 +41,10 @@ class Settings(BaseSettings):
     huggingface_model: str = "sentence-transformers/all-MiniLM-L6-v2"
 
     # Ollama configuration (for local LLM)
+    # Defaults to localhost for portability
+    # Docker Compose will override this via environment variable
     ollama_model: str = "llama3.1:8b-instruct-q4_0"
-    ollama_base_url: str = "http://ollama:11434"
+    ollama_base_url: str = "http://localhost:11434"
 
     # LangChain/LangSmith configuration
     langchain_api_key: Optional[str] = None
