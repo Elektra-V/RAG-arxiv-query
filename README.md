@@ -255,7 +255,7 @@ This uses the `langgraph.json` configuration file.
 - Docs: http://localhost:9010/docs
 
 **Ingestion commands:**
-- **Ingest documents** (must do this first!): `uv run rag-api-ingest run`
+- **Ingest documents** (must do this first!): `uv run rag-api-ingest --query "topic" --max-docs 5`
 - **Ingest via API**: `curl -X POST http://localhost:9030/ingest -H "Content-Type: application/json" -d '{"query": "quantum computing", "max_docs": 5}'`
 - **Check status**: `curl http://localhost:9010/status` (look for collections in response)
 
