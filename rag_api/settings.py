@@ -52,13 +52,13 @@ class Settings(BaseSettings):
     duckduckgo_results: int = 3
 
     langchain_host: str = "0.0.0.0"
-    langchain_port: int = 8009
+    langchain_port: int = 9010  # Changed from 8009 to avoid conflicts
 
     llamaindex_host: str = "0.0.0.0"
-    llamaindex_port: int = 8080
+    llamaindex_port: int = 9020  # Changed from 8080 to avoid conflicts
 
     ingestion_host: str = "0.0.0.0"
-    ingestion_port: int = 8090
+    ingestion_port: int = 9030  # Changed from 8090 to avoid conflicts
 
 
 @lru_cache

@@ -2,7 +2,7 @@ services:
   qdrant:
     image: qdrant/qdrant:latest
     ports:
-      - "6333:6333"
+      - "6334:6333"  # External port 6334 to avoid conflict with original project
     volumes:
       - qdrant_data:/qdrant/storage
 
@@ -15,11 +15,11 @@ services:
     environment:
       - QDRANT_URL=http://qdrant:6333
       - LANGCHAIN_HOST=0.0.0.0
-      - LANGCHAIN_PORT=8009
+      - LANGCHAIN_PORT=9010
     depends_on:
       - qdrant
     ports:
-      - "8009:8009"
+      - "9010:9010"  # Changed from 8009 to avoid conflicts
 
   llamaindex:
     build:
@@ -30,11 +30,11 @@ services:
     environment:
       - QDRANT_URL=http://qdrant:6333
       - LLAMAINDEX_HOST=0.0.0.0
-      - LLAMAINDEX_PORT=8080
+      - LLAMAINDEX_PORT=9020
     depends_on:
       - qdrant
     ports:
-      - "8080:8080"
+      - "9020:9020"  # Changed from 8080 to avoid conflicts
 
   ingestion:
     build:
@@ -45,11 +45,11 @@ services:
     environment:
       - QDRANT_URL=http://qdrant:6333
       - INGESTION_HOST=0.0.0.0
-      - INGESTION_PORT=8010
+      - INGESTION_PORT=9030
     depends_on:
       - qdrant
     ports:
-      - "8010:8010"
+      - "9030:9030"  # Changed from 8010 to avoid conflicts
     command: ["uv", "run", "python", "-m", "rag_api.services.ingestion.app"]
 
 volumes:

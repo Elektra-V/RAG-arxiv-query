@@ -32,8 +32,8 @@ EMBEDDING_PROVIDER="openai"
 
 **Option 1: Use LangGraph Dev** (Recommended - Best UI):
 ```bash
-# Make sure Qdrant is running first
-docker run -d -p 6333:6333 qdrant/qdrant
+# Make sure Qdrant is running first (using port 6334 to avoid conflicts)
+docker run -d -p 6334:6333 qdrant/qdrant
 
 # Then start LangGraph Dev
 langgraph dev --graph rag_api.services.langchain.graph:graph
@@ -45,14 +45,15 @@ Open: **http://localhost:8123** - Beautiful built-in UI!
 docker compose up --build
 ```
 This starts:
-- Qdrant on port 6333
-- LangChain API on port 8009
-- LlamaIndex API on port 8080
+- Qdrant on port **6334** (changed to avoid conflicts)
+- LangChain API on port **9010** (changed from 8009)
+- LlamaIndex API on port **9020** (changed from 8080)
+- Ingestion API on port **9030** (changed from 8010)
 
 #### Step 4: Open Browser
 - **LangGraph Dev UI**: http://localhost:8123 (if using langgraph dev)
-- **LangChain API**: http://localhost:8009/ (if using docker/compose)
-- **LlamaIndex**: http://localhost:8080/
+- **LangChain API**: http://localhost:9010/ (if using docker/compose)
+- **LlamaIndex**: http://localhost:9020/
 
 ---
 
@@ -81,8 +82,10 @@ uv sync
 #### Step 5: Start Qdrant (if not using Docker)
 You need Qdrant running. Install it or use Docker:
 ```bash
-docker run -d -p 6333:6333 qdrant/qdrant
+# Using port 6334 to avoid conflicts with original project
+docker run -d -p 6334:6333 qdrant/qdrant
 ```
+**Important**: Update `QDRANT_URL="http://localhost:6334"` in your `.env` file.
 
 #### Step 6: Start with LangGraph Dev (Recommended - Better UI)
 ```bash
@@ -147,12 +150,18 @@ langgraph dev --graph rag_api.services.langchain.graph:graph
 
 **API Server** (for production/testing):
 - Start: `uv run rag_api/services/langchain/app.py`
-- API: http://localhost:8009/
-- Docs: http://localhost:8009/docs
+- API: http://localhost:9010/ (changed from 8009)
+- Docs: http://localhost:9010/docs
 
 **Other commands:**
 - Check models: `uv run python check_company_models.py`
-- Check status: `curl http://localhost:8009/status`
+- Check status: `curl http://localhost:9010/status`
+
+**Note**: Ports changed to 9000+ range to avoid conflicts with original project:
+- LangChain: 9010 (was 8009)
+- LlamaIndex: 9020 (was 8080)
+- Ingestion: 9030 (was 8090)
+- Qdrant: 6334 (was 6333)
 
 ---
 
