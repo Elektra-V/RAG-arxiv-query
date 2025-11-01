@@ -49,10 +49,6 @@ OPENAI_MODEL="gpt-4"
 OPENAI_EMBEDDING_MODEL="text-embedding-3-small"
 ```
 
-**Check available models:**
-```bash
-uv run python check_company_models.py
-```
 
 ### Option 2: Local Testing (Free APIs)
 
@@ -183,10 +179,8 @@ curl http://localhost:6334/collections
 
 **"Connection failed"**
 - Check credentials in `.env`
-- Test with: `uv run python check_company_models.py`
 
 **"Model not found"**
-- List models: `uv run python check_company_models.py`
 - Update `OPENAI_MODEL` in `.env`
 
 **"port is already allocated"**
@@ -216,7 +210,6 @@ rag-api/
 ├── pyproject.toml            # Dependencies
 ├── docker-compose.yml        # Docker setup
 ├── langgraph.json            # LangGraph config
-├── check_company_models.py    # List available models
 ├── check_setup.py            # Verify your setup
 └── rag_api/                  # Source code
     ├── settings.py           # Configuration
