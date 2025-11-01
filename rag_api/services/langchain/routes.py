@@ -92,13 +92,16 @@ async def query(request: QueryRequest) -> QueryResponse:
     start_time = time.time()
 
     try:
-        logger.info(f"Processing query: {request.question[:100]}...")
+        logger.info(f"📥 Received query: {request.question[:100]}...")
+        logger.debug(f"Query details: debug={request.debug}, full_question={request.question}")
         
+        logger.info("🔍 Invoking agent...")
         response = agent.invoke(
             {"messages": [{"role": "user", "content": request.question}]}
         )
         
         execution_time = (time.time() - start_time) * 1000  # Convert to ms
+        logger.info(f"✅ Agent response received in {execution_time:.2f}ms")
         
     except httpx.ConnectError as exc:
         error_msg = f"Unable to reach model service"
@@ -113,12 +116,15 @@ async def query(request: QueryRequest) -> QueryResponse:
     # Extract answer
     if isinstance(response, dict) and "messages" in response:
         messages = response["messages"]
+        logger.debug(f"📨 Extracted {len(messages)} messages from agent response")
         answer = _content_from_messages(messages)
+        logger.debug(f"💬 Answer extracted: {answer[:100]}...")
         
         # Extract debug info if requested
         debug_info = {}
         if request.debug:
             tools_used = _extract_tools_from_messages(messages)
+            logger.debug(f"🔧 Tools used: {tools_used}")
             debug_info = {
                 "tools_used": tools_used,
                 "steps_taken": len(messages),
@@ -189,6 +195,98 @@ async def query_stream(request: QueryRequest) -> StreamingResponse:
             yield f"data: {json.dumps(error_data)}\n\n"
 
     return StreamingResponse(generate_stream(), media_type="text/event-stream")
+
+
+@router.get("/debug")
+async def debug() -> dict[str, Any]:
+    """Get detailed debug information for troubleshooting."""
+    import logging
+    from rag_api.clients.qdrant import get_qdrant_client
+    from rag_api.clients.openai import get_openai_client
+    
+    logger = logging.getLogger(__name__)
+    settings = get_settings()
+    debug_info = {
+        "service": "langchain-rag-api",
+        "status": "healthy",
+        "configuration": {
+            "llm_provider": settings.llm_provider,
+            "embedding_provider": settings.embedding_provider,
+            "qdrant_url": settings.qdrant_url,
+            "collection": settings.qdrant_collection,
+        },
+    }
+    
+    # Test Qdrant connection
+    try:
+        client = get_qdrant_client()
+        collections = client.get_collections().collections
+        collection_names = [c.name for c in collections]
+        debug_info["qdrant"] = {
+            "connected": True,
+            "collections": collection_names,
+            "collection_exists": settings.qdrant_collection in collection_names,
+        }
+        
+        # Check collection info if it exists
+        if settings.qdrant_collection in collection_names:
+            info = client.get_collection(settings.qdrant_collection)
+            debug_info["qdrant"]["collection_info"] = {
+                "points_count": info.points_count,
+                "vectors_count": info.vectors_count if hasattr(info, 'vectors_count') else 0,
+            }
+        else:
+            debug_info["qdrant"]["collection_info"] = {
+                "error": "Collection does not exist - run ingestion first!",
+                "points_count": 0,
+            }
+    except Exception as exc:
+        logger.exception("Failed to connect to Qdrant")
+        debug_info["qdrant"] = {
+            "connected": False,
+            "error": str(exc),
+            "collections": [],
+        }
+        debug_info["status"] = "degraded"
+    
+    # Test OpenAI client (LLM)
+    try:
+        openai_client = get_openai_client()
+        # Try to list models to verify connection
+        debug_info["llm"] = {
+            "provider": settings.llm_provider,
+            "model": settings.openai_model,
+            "base_url": settings.openai_base_url or "default",
+            "auth_configured": bool(settings.openai_auth_username and settings.openai_auth_password),
+        }
+    except Exception as exc:
+        logger.exception("Failed to configure LLM client")
+        debug_info["llm"] = {
+            "error": str(exc),
+            "provider": settings.llm_provider,
+        }
+        debug_info["status"] = "degraded"
+    
+    # Test Embeddings
+    try:
+        from rag_api.clients.embeddings import get_embeddings
+        embeddings = get_embeddings()
+        test_embedding = embeddings.embed_query("test")
+        debug_info["embeddings"] = {
+            "provider": settings.embedding_provider,
+            "model": settings.openai_embedding_model if settings.embedding_provider == "openai" else settings.huggingface_model,
+            "dimension": len(test_embedding),
+            "working": True,
+        }
+    except Exception as exc:
+        logger.exception("Failed to test embeddings")
+        debug_info["embeddings"] = {
+            "error": str(exc),
+            "working": False,
+        }
+        debug_info["status"] = "degraded"
+    
+    return debug_info
 
 
 @router.get("/status")

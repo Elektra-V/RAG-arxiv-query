@@ -248,9 +248,11 @@ This uses the `langgraph.json` configuration file.
 - **Ingest via API**: `curl -X POST http://localhost:9030/ingest -H "Content-Type: application/json" -d '{"query": "quantum computing", "max_docs": 5}'`
 - **Check status**: `curl http://localhost:9010/status` (look for collections in response)
 
-**Other commands:**
-- Check models: `uv run python check_company_models.py`
-- Check Qdrant: `curl http://localhost:6334/collections` (should show arxiv_papers)
+**Debugging:**
+- **Detailed debug info**: `curl http://localhost:9010/debug | jq '.'` (shows everything!)
+- **Check models**: `uv run python check_company_models.py`
+- **Check Qdrant**: `curl http://localhost:6334/collections` (should show arxiv_papers)
+- **View logs**: `docker compose logs -f langchain` (or check terminal if running locally)
 
 **Note**: Ports changed to 9000+ range to avoid conflicts with original project:
 - LangChain: 9010 (was 8009)
@@ -329,8 +331,35 @@ This uses the `langgraph.json` configuration file.
 
 ---
 
+---
+
+## 📖 How to Use This System (Complete Workflow)
+
+**See `USAGE_WORKFLOW.md` for detailed step-by-step usage guide.**
+
+### Quick Summary:
+
+```
+1. Setup → 2. Ingest Documents → 3. Query → 4. Debug
+```
+
+**Complete workflow:**
+1. **Start services**: `docker compose up`
+2. **Ingest documents**: `uv run rag-api-ingest run` (MUST do this first!)
+3. **Query the system**:
+   - **Via API**: `curl -X POST http://localhost:9010/query -H "Content-Type: application/json" -d '{"question": "your question"}'`
+   - **Via LangGraph Dev**: `uv run langgraph dev` then open http://localhost:8123
+   - **Via LlamaIndex UI**: http://localhost:9020/
+
+**Important**: Without ingested documents, queries will return no results!
+
+---
+
 ## 🎯 That's It!
 
-Follow the 6 steps above. If something breaks, check the Troubleshooting section.
+Follow the setup steps above. Then see `USAGE_WORKFLOW.md` for complete usage guide.
 
-**Need help?** Check the terminal output - error messages will tell you what's wrong.
+**Need help?** 
+- Check `USAGE_WORKFLOW.md` for detailed workflow
+- Use `/debug` endpoint: `curl http://localhost:9010/debug` for detailed system info
+- Check the Troubleshooting section below
