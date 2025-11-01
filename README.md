@@ -32,6 +32,10 @@ EMBEDDING_PROVIDER="openai"
 
 **Option 1: Use Docker Compose** (Recommended - Handles everything):
 ```bash
+# First time or if you see "orphan containers" warning, use:
+docker compose up --build --remove-orphans
+
+# Or for normal use:
 docker compose up --build
 ```
 This automatically:
@@ -154,8 +158,10 @@ uv run langgraph dev --graph rag_api.services.langchain.graph:graph
 ## 📝 Quick Reference
 
 **Docker commands:**
-- Start everything: `docker compose up`
+- Start everything: `docker compose up --build`
+- Start and clean orphans: `docker compose up --build --remove-orphans`
 - Stop everything: `docker compose down`
+- Stop and remove volumes: `docker compose down -v`
 - View logs: `docker compose logs -f langchain`
 
 **LangGraph Dev** (recommended for debugging):
@@ -200,6 +206,22 @@ uv run langgraph dev --graph rag_api.services.langchain.graph:graph
 **"langgraph: command not found"**
 - Run `uv sync` first to install dependencies
 - Then use `uv run langgraph dev ...` instead of just `langgraph dev`
+
+**"port is already allocated" / "Bind failed"**
+- Stop existing containers: `docker compose down`
+- If port still in use, find and stop the container:
+  ```bash
+  docker ps | grep 6334  # Find container using port 6334
+  docker stop <container-id>  # Stop it
+  ```
+- Or change the port in `docker-compose.yml` if needed
+
+**"Found orphan containers" warning**
+- Use `--remove-orphans` flag:
+  ```bash
+  docker compose up --build --remove-orphans
+  ```
+- This cleans up old containers from previous configurations
 
 ---
 
