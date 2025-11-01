@@ -20,7 +20,8 @@ docker compose up --build
 # Option B: Local (for debugging)
 uv sync
 docker run -d -p 6334:6333 qdrant/qdrant
-uv run langgraph dev  # Opens UI at http://localhost:8123
+uv run langgraph dev --tunnel  # Opens Studio UI via tunnel (Safari-compatible)
+# Note: Use --tunnel flag for Safari or if localhost is blocked
 ```
 
 ### 3. Ingest Documents (Required Before Querying!)
@@ -114,6 +115,11 @@ curl -X POST http://localhost:9010/query \
 
 **Option B: Via LangGraph Dev (Best for debugging)**
 ```bash
+# With tunnel (for Safari or external access):
+uv run langgraph dev --tunnel
+# Opens Studio UI via Cloudflare tunnel - works in Safari!
+
+# Without tunnel (localhost only):
 uv run langgraph dev
 # Opens UI at http://localhost:8123 - interactive debugging!
 ```
