@@ -2,78 +2,139 @@
 
 Dual-service Retrieval-Augmented Generation platform providing LangChain agent and LlamaIndex endpoints backed by Qdrant and Ollama.
 
+## Quick Start
+
+**For most users, follow these steps:**
+
+1. **Copy environment template**: `cp env.example .env`
+2. **Edit `.env`** with your configuration (see [Configuration](#configuration) below)
+3. **Install dependencies**: `uv sync`
+4. **Validate setup**: `uv run python check_setup.py`
+5. **Start a service**: `uv run rag_api/services/langchain/app.py`
+6. **Open in browser**: http://localhost:8009/
+
+**📖 For detailed guides, see:**
+- **New machine setup**: See [Setup on New Machine](#setup-on-new-machine) section
+- **Company API with Basic auth**: See [Company API Configuration](#company-api-configuration) section
+
 ## Features
 
 - Manual ingestion CLI to load arXiv content into Qdrant using HuggingFace embeddings.
 - LangChain FastAPI service on port 8009 with LangGraph ReAct agent and DuckDuckGo search tool.
 - LlamaIndex FastAPI service on port 8080 offering direct retrieval over the shared Qdrant collection.
+- Support for local models (Ollama), cloud APIs (OpenAI, Anthropic), and company APIs with Basic auth.
+- Built-in debugging UI, LangSmith tracing, and enhanced observability.
 
-## Setup
+## Configuration
 
-Create a `.env` file with service URLs and optional overrides. Default values are shown below.
+**Step 1**: Copy the template: `cp env.example .env`
+
+**Step 2**: Edit `.env` based on your setup:
+
+### Option A: Local Models (Ollama + HuggingFace)
 
 ```env
-ARXIV_QUERY="quantum computing"
-ARXIV_MAX_DOCS=5
-QDRANT_URL="http://qdrant:6333"
-QDRANT_COLLECTION="arxiv_papers"
-HUGGINGFACE_MODEL="sentence-transformers/all-MiniLM-L6-v2"
-OLLAMA_MODEL="llama3.1:8b-instruct-q4_0"
-OLLAMA_BASE_URL="http://ollama:11434"
-DUCKDUCKGO_RESULTS=3
-LANGCHAIN_HOST="0.0.0.0"
-LANGCHAIN_PORT=8009
-LLAMAINDEX_HOST="0.0.0.0"
-LLAMAINDEX_PORT=8080
-INGESTION_HOST="0.0.0.0"
-INGESTION_PORT=8090
+# Model providers
+LLM_PROVIDER="ollama"
+EMBEDDING_PROVIDER="huggingface"
 
-OLLAMA_SOCKET=/var/run/ollama.sock
-OLLAMA_MODEL_VOLUME=ollama-models
+# Required
+QDRANT_URL="http://localhost:6333"
+QDRANT_COLLECTION="arxiv_papers"
+
+# Ollama config
+OLLAMA_BASE_URL="http://localhost:11434"
+OLLAMA_MODEL="llama3.1:8b-instruct-q4_0"
+
+# HuggingFace config
+HUGGINGFACE_MODEL="sentence-transformers/all-MiniLM-L6-v2"
+
+# Optional - disable LangSmith if no key
+LANGSMITH_TRACING=false
 ```
 
-### Company API Configuration
-
-For custom OpenAI-compatible APIs (like Fraunhofer GenAI) that use Basic authentication:
+### Option B: Cloud APIs (OpenAI or Anthropic)
 
 ```env
+# Model providers
+LLM_PROVIDER="openai"  # or "anthropic"
+EMBEDDING_PROVIDER="openai"
+
+# OpenAI config
+OPENAI_API_KEY="sk-your-key-here"
+OPENAI_MODEL="gpt-4o-mini"
+
+# OR Anthropic config
+ANTHROPIC_API_KEY="sk-ant-your-key-here"
+ANTHROPIC_MODEL="claude-3-5-sonnet-20241022"
+```
+
+### Option C: Company API (Basic Auth)
+
+```env
+# Model providers
 LLM_PROVIDER="openai"
 EMBEDDING_PROVIDER="openai"
 
-# Company API settings
+# Company API - secrets go in .env file
 OPENAI_BASE_URL="https://genai.iais.fraunhofer.de/api/v2"
 OPENAI_AUTH_USERNAME="your-username"
 OPENAI_AUTH_PASSWORD="your-password"
-OPENAI_API_KEY="xxxx"  # Can be placeholder when using Basic auth
-OPENAI_MODEL="Llama-3-SauerkrautLM"  # Your company's model name
+OPENAI_API_KEY="xxxx"  # Placeholder is fine with Basic auth
+OPENAI_MODEL="Llama-3-SauerkrautLM"
 ```
 
-The system automatically handles Base64 encoding and adds the `Authorization: Basic <token>` header to all requests.
-
-Install dependencies via `uv`:
+**Step 3**: Install dependencies
 
 ```bash
 uv sync
 ```
 
-### Setup Validation
-
-When setting up on a new machine, run the validation script to check your configuration:
+**Step 4**: Validate setup
 
 ```bash
 uv run python check_setup.py
 ```
 
-This will verify:
-- Project structure and files
-- Required environment variables
-- Python dependencies
-- Service files
+This checks project structure, dependencies, and configuration.
 
-**Note for work machines**: If you can't set API keys on your current machine, that's okay! The code will:
-- Gracefully disable LangSmith tracing if no API key is found (with a warning)
-- Work with whatever provider is configured (Ollama, OpenAI, or Anthropic)
-- Only fail if you try to use a provider that requires an API key but no key is provided
+> **Note**: See `env.example` for all available configuration options.
+
+## Setup on New Machine
+
+When setting up on a **work machine** or new environment:
+
+1. **Copy project** to the new machine
+2. **Run validation**: `uv run python check_setup.py`
+3. **Copy `.env` template**: `cp env.example .env`
+4. **Edit `.env`** with your credentials
+5. **Install**: `uv sync`
+
+**The code handles missing API keys gracefully:**
+- LangSmith tracing disables automatically (with warning)
+- Works with whatever provider you configure
+- Only fails if you try to use a provider without required credentials
+
+## Company API Configuration
+
+For **company APIs with Basic authentication** (like Fraunhofer GenAI):
+
+**Configuration** (in `.env`):
+```env
+OPENAI_BASE_URL="https://genai.iais.fraunhofer.de/api/v2"
+OPENAI_AUTH_USERNAME="your-username"
+OPENAI_AUTH_PASSWORD="your-password"
+OPENAI_API_KEY="xxxx"
+OPENAI_MODEL="Llama-3-SauerkrautLM"
+```
+
+**How it works**:
+1. Secrets read from `.env` file
+2. `rag_api/clients/openai.py` encodes `username:password` as Base64
+3. Creates OpenAI client with `Authorization: Basic <token>` header
+4. All services (LangChain, LlamaIndex, embeddings) use the same client
+
+**To debug**: Check `rag_api/clients/openai.py` - all auth logic is in one place.
 
 ## Ingestion
 
@@ -227,3 +288,34 @@ Instead of curl, you can use the interactive web interfaces:
 - Visit http://localhost:8080/ for LlamaIndex service
 
 The UI shows real-time status, formatted responses, and detailed debug information.
+
+---
+
+## Additional Resources
+
+- **Full environment template**: See `env.example` for all configuration options
+- **Setup validation**: Run `uv run python check_setup.py` to verify your configuration
+- **Company API details**: Authentication logic in `rag_api/clients/openai.py`
+- **API documentation**: Visit `/docs` on any service (e.g., http://localhost:8009/docs)
+
+## Troubleshooting
+
+**Service won't start?**
+1. Check `.env` file exists: `cp env.example .env`
+2. Run validation: `uv run python check_setup.py`
+3. Check logs for specific error messages
+
+**Authentication errors?**
+1. Verify credentials in `.env`
+2. For company API: Check `rag_api/clients/openai.py` encoding logic
+3. Test client directly: See `COMPANY_API_GUIDE.md` for examples
+
+**Missing dependencies?**
+```bash
+uv sync  # Installs all dependencies
+```
+
+**Need help?**
+- Check service status: `curl http://localhost:8009/status`
+- Use debug UI: http://localhost:8009/
+- Check logs for detailed error messages

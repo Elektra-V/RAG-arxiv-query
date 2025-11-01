@@ -1,5 +1,9 @@
 # Setting Up on Your Work Machine
 
+> **📖 Main README**: For general setup, see [README.md](README.md)
+> 
+> This is a **supplementary guide** for setting up on work machines or new environments.
+
 This guide helps you set up the RAG API on a new machine (like your work machine) where you might have different permissions or need to use different API keys.
 
 ## Quick Start

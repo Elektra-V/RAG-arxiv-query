@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import os
-from base64 import b64encode
 
 from langchain_core.language_models import BaseChatModel
 
@@ -24,6 +23,7 @@ except ImportError:
 
 from langgraph.prebuilt import create_react_agent
 
+from rag_api.clients.openai import get_openai_client
 from rag_api.services.langchain.tools import get_tools
 from rag_api.settings import get_settings
 
@@ -74,50 +74,17 @@ def get_llm_model() -> BaseChatModel:
             raise ImportError(
                 "langchain-openai is not installed. Install it with: uv add langchain-openai"
             )
-        # API key can be provided via env var OPENAI_API_KEY or explicitly
-        api_key = settings.openai_api_key or "xxxx"  # Use placeholder if not set (for company APIs)
         
-        # Build custom headers for company API Basic auth
-        default_headers = {}
-        if settings.openai_auth_username and settings.openai_auth_password:
-            token_string = f"{settings.openai_auth_username}:{settings.openai_auth_password}"
-            token_bytes = b64encode(token_string.encode())
-            default_headers["Authorization"] = f"Basic {token_bytes.decode()}"
+        # Use the centralized OpenAI client factory
+        # This handles Basic auth encoding and client creation according to company API pattern
+        openai_client = get_openai_client()
         
-        # Create client kwargs
-        client_kwargs = {
-            "model": settings.openai_model,
-            "api_key": api_key,
-            "temperature": 0,
-        }
-        
-        # Add custom base URL if provided (for company APIs)
-        if settings.openai_base_url:
-            client_kwargs["base_url"] = settings.openai_base_url
-        
-        # Add default headers if Basic auth is configured
-        if default_headers:
-            # LangChain's ChatOpenAI uses OpenAI SDK which supports default_headers
-            # We need to create a custom OpenAI client and pass it
-            try:
-                from openai import OpenAI
-                openai_client = OpenAI(
-                    api_key=api_key,
-                    base_url=settings.openai_base_url or "https://api.openai.com/v1",
-                    default_headers=default_headers,
-                )
-                client_kwargs["client"] = openai_client
-            except ImportError:
-                # If openai package not available directly, try passing headers via http_client
-                # For now, log a warning and proceed without custom headers
-                import logging
-                logger = logging.getLogger(__name__)
-                logger.warning(
-                    "Custom auth headers configured but 'openai' package not available. "
-                    "Install 'openai' package to enable Basic auth support."
-                )
-        
-        return ChatOpenAI(**client_kwargs)
+        # Create LangChain ChatOpenAI wrapper with the configured client
+        return ChatOpenAI(
+            model=settings.openai_model,
+            client=openai_client,
+            temperature=0,
+        )
 
     elif settings.llm_provider == "anthropic":
         if ChatAnthropic is None:
