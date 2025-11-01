@@ -77,9 +77,12 @@ def create_openai_client(
     password = password or settings.openai_auth_password
     
     # Build default headers for Basic auth if credentials provided
+    # Follow EXACT pattern from company API documentation:
+    # 1. Create token_string: f"{username}:{password}"
+    # 2. Encode as Base64: b64encode(token_string.encode())
+    # 3. Add to headers: {"Authorization": f"Basic {token_bytes.decode()}"}
     default_headers = {}
     if username and password:
-        # Follow official company API pattern: Base64 encode username:password
         token_string = f"{username}:{password}"
         token_bytes = b64encode(token_string.encode())
         default_headers["Authorization"] = f"Basic {token_bytes.decode()}"
@@ -89,18 +92,12 @@ def create_openai_client(
             f"(base_url={base_url}, username={username})"
         )
     
-    # Create OpenAI client with custom configuration
-    client_kwargs = {
-        "api_key": api_key,
-    }
-    
-    if base_url:
-        client_kwargs["base_url"] = base_url
-    
-    if default_headers:
-        client_kwargs["default_headers"] = default_headers
-    
-    client = OpenAI(**client_kwargs)
+    # Create OpenAI client following exact company API pattern
+    client = OpenAI(
+        api_key=api_key,
+        default_headers=default_headers if default_headers else None,
+        base_url=base_url
+    )
     
     return client
 
