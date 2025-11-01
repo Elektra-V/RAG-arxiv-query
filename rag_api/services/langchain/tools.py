@@ -25,7 +25,7 @@ def rag_query(query: str) -> str:
     )
 
     if not results:
-        return "No matching documents found."
+        return "RAG_EMPTY: No matching documents found in the knowledge base."
 
     formatted = []
     for match in results:

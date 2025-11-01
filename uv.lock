@@ -2534,7 +2534,7 @@ wheels = [
 [[package]]
 name = "rag-api"
 version = "0.0.1"
-source = { virtual = "." }
+source = { editable = "." }
 dependencies = [
     { name = "arxiv" },
     { name = "ddgs" },
