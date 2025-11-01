@@ -49,6 +49,10 @@ OPENAI_MODEL="gpt-4"
 OPENAI_EMBEDDING_MODEL="text-embedding-3-small"
 ```
 
+**Check available models:**
+```bash
+uv run python check_company_models.py
+```
 
 ### Option 2: Local Testing (Free APIs)
 
