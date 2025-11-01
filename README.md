@@ -73,10 +73,41 @@ docker run -d -p 6334:6333 qdrant/qdrant
 uv run langgraph dev
 ```
 
-#### Step 4: Open Browser
+#### Step 4: Ingest Documents (IMPORTANT - Do This First!)
+**Before querying, you need to populate Qdrant with documents:**
+
+**Option A: Using API (recommended):**
+```bash
+curl -X POST http://localhost:9030/ingest \
+  -H "Content-Type: application/json" \
+  -d '{"query": "quantum computing", "max_docs": 5}'
+```
+
+**Option B: Using CLI:**
+```bash
+# If running locally (not Docker)
+uv run rag-api-ingest run --query "quantum computing" --max-docs 5
+
+# Or use defaults from .env
+uv run rag-api-ingest run
+```
+
+**This will:**
+- Download arXiv papers matching your query
+- Create embeddings using your configured embedding model
+- Store them in Qdrant for RAG queries
+
+**Check if it worked:**
+```bash
+curl http://localhost:9010/status | grep collections
+# Should show collections: ["arxiv_papers"] instead of []
+```
+
+#### Step 5: Open Browser and Test
+- **LangChain API**: http://localhost:9010/ (query endpoint)
+- **LangChain Docs**: http://localhost:9010/docs
+- **LlamaIndex UI**: http://localhost:9020/ (debug interface)
 - **LangGraph Dev UI**: http://localhost:8123 (if using langgraph dev)
-- **LangChain API**: http://localhost:9010/ (if using docker/compose)
-- **LlamaIndex**: http://localhost:9020/
 
 ---
 
@@ -111,7 +142,31 @@ docker run -d -p 6334:6333 qdrant/qdrant
 ```
 **Important**: Update `QDRANT_URL="http://localhost:6334"` in your `.env` file.
 
-#### Step 6: Start with LangGraph Dev (Recommended - Better UI)
+#### Step 6: Ingest Documents (CRITICAL - Do This Before Querying!)
+**Your Qdrant database is empty! You need to populate it first:**
+
+```bash
+# Option 1: Using CLI (recommended)
+uv run rag-api-ingest run --query "quantum computing" --max-docs 5
+
+# Option 2: Using defaults from .env
+uv run rag-api-ingest run
+
+# Option 3: Using API endpoint (if ingestion service is running)
+curl -X POST http://localhost:9030/ingest \
+  -H "Content-Type: application/json" \
+  -d '{"query": "quantum computing", "max_docs": 5}'
+```
+
+**This downloads arXiv papers, creates embeddings, and stores them in Qdrant.**
+
+**Verify it worked:**
+```bash
+curl http://localhost:9010/status | grep collections
+# Should show: "collections":["arxiv_papers"] instead of []
+```
+
+#### Step 7: Start with LangGraph Dev (Optional - Better UI)
 ```bash
 uv run langgraph dev
 ```
@@ -127,7 +182,7 @@ This gives you:
 ```bash
 uv run rag_api/services/langchain/app.py
 ```
-Then access: http://localhost:8009/
+Then access: http://localhost:9010/
 
 ---
 
@@ -188,9 +243,14 @@ This uses the `langgraph.json` configuration file.
 - API: http://localhost:9010/ (changed from 8009)
 - Docs: http://localhost:9010/docs
 
+**Ingestion commands:**
+- **Ingest documents** (must do this first!): `uv run rag-api-ingest run`
+- **Ingest via API**: `curl -X POST http://localhost:9030/ingest -H "Content-Type: application/json" -d '{"query": "quantum computing", "max_docs": 5}'`
+- **Check status**: `curl http://localhost:9010/status` (look for collections in response)
+
 **Other commands:**
 - Check models: `uv run python check_company_models.py`
-- Check status: `curl http://localhost:9010/status`
+- Check Qdrant: `curl http://localhost:6334/collections` (should show arxiv_papers)
 
 **Note**: Ports changed to 9000+ range to avoid conflicts with original project:
 - LangChain: 9010 (was 8009)
@@ -234,6 +294,22 @@ This uses the `langgraph.json` configuration file.
 **"No such option: --graph"**
 - Use `uv run langgraph dev` (without `--graph` flag)
 - The project includes `langgraph.json` which configures the graph automatically
+
+**"Required package 'langgraph-api' is not installed"**
+- Run `uv sync` again to install the updated dependencies
+- The `langgraph-cli[inmem]` extra includes langgraph-api
+- Or install manually: `uv add "langgraph-cli[inmem]"`
+
+**"collections": [] - Qdrant is empty**
+- **You need to ingest documents first!**
+- Run: `uv run rag-api-ingest run`
+- Or use API: `curl -X POST http://localhost:9030/ingest -H "Content-Type: application/json" -d '{"query": "quantum computing", "max_docs": 5}'`
+- Without documents, queries will return no results
+
+**Ingestion endpoint returns 404**
+- Ingestion service endpoint is `/ingest` not `/`
+- Use: `curl -X POST http://localhost:9030/ingest`
+- Check if service is running: `docker compose ps` or `curl http://localhost:9030/ingest` (should return method not allowed, not 404)
 
 **"Found orphan containers" warning**
 - Use `--remove-orphans` flag:
