@@ -47,21 +47,31 @@ This automatically:
 
 **Option 2: Use LangGraph Dev Locally** (For debugging):
 
-⚠️ **IMPORTANT**: You MUST install dependencies first!
-```bash
-uv sync  # CRITICAL - must do this FIRST before anything else!
-```
+⚠️ **IMPORTANT**: 
+- **Don't start Qdrant separately** if Docker Compose is already running!
+- Docker Compose already started Qdrant on port 6334
+- Just use the Qdrant that's already running
 
-**Then start Qdrant:**
+**Install dependencies:**
 ```bash
-docker run -d -p 6334:6333 qdrant/qdrant
+uv sync  # CRITICAL - must do this FIRST!
 ```
 
 **Then start LangGraph Dev:**
 ```bash
-uv run langgraph dev --graph rag_api.services.langchain.graph:graph
+uv run langgraph dev
 ```
+This will use `langgraph.json` config file to find your graph.
 Open: **http://localhost:8123** - Beautiful built-in UI!
+
+**Note**: If Docker Compose is NOT running and you want to use LangGraph Dev:
+```bash
+# First start Qdrant
+docker run -d -p 6334:6333 qdrant/qdrant
+
+# Then start langgraph dev
+uv run langgraph dev
+```
 
 #### Step 4: Open Browser
 - **LangGraph Dev UI**: http://localhost:8123 (if using langgraph dev)
@@ -93,7 +103,8 @@ uv sync
 ```
 
 #### Step 5: Start Qdrant (if not using Docker)
-You need Qdrant running. Install it or use Docker:
+**Only if Docker Compose is NOT running!** If Docker Compose is running, skip this step.
+
 ```bash
 # Using port 6334 to avoid conflicts with original project
 docker run -d -p 6334:6333 qdrant/qdrant
@@ -102,8 +113,9 @@ docker run -d -p 6334:6333 qdrant/qdrant
 
 #### Step 6: Start with LangGraph Dev (Recommended - Better UI)
 ```bash
-langgraph dev --graph rag_api.services.langchain.graph:graph
+uv run langgraph dev
 ```
+This uses `langgraph.json` config file (already created).
 
 This gives you:
 - Beautiful UI for debugging at http://localhost:8123
@@ -132,8 +144,9 @@ uv sync  # Must do this FIRST!
 
 **Then start it:**
 ```bash
-uv run langgraph dev --graph rag_api.services.langchain.graph:graph
+uv run langgraph dev
 ```
+This uses the `langgraph.json` configuration file.
 
 **Access the UI:**
 - Open: http://localhost:8123 (or the port shown in terminal)
@@ -166,8 +179,9 @@ uv run langgraph dev --graph rag_api.services.langchain.graph:graph
 
 **LangGraph Dev** (recommended for debugging):
 - **First**: `uv sync` (install dependencies)
-- **Then**: `uv run langgraph dev --graph rag_api.services.langchain.graph:graph`
+- **Then**: `uv run langgraph dev` (uses langgraph.json config)
 - UI: http://localhost:8123
+- **Note**: If Docker Compose is running, Qdrant is already available - don't start it again!
 
 **API Server** (for production/testing):
 - Start: `uv run rag_api/services/langchain/app.py`
@@ -208,13 +222,18 @@ uv run langgraph dev --graph rag_api.services.langchain.graph:graph
 - Then use `uv run langgraph dev ...` instead of just `langgraph dev`
 
 **"port is already allocated" / "Bind failed"**
-- Stop existing containers: `docker compose down`
-- If port still in use, find and stop the container:
+- **If Docker Compose is running**: Don't start Qdrant separately! It's already running.
+- **If you want to stop everything first**: `docker compose down`
+- **If you need Qdrant separately**: Stop Docker Compose first, or use a different port
+- Find what's using the port:
   ```bash
   docker ps | grep 6334  # Find container using port 6334
   docker stop <container-id>  # Stop it
   ```
-- Or change the port in `docker-compose.yml` if needed
+
+**"No such option: --graph"**
+- Use `uv run langgraph dev` (without `--graph` flag)
+- The project includes `langgraph.json` which configures the graph automatically
 
 **"Found orphan containers" warning**
 - Use `--remove-orphans` flag:
