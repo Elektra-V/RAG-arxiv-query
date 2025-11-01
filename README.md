@@ -296,9 +296,9 @@ This uses the `langgraph.json` configuration file.
 - The project includes `langgraph.json` which configures the graph automatically
 
 **"Required package 'langgraph-api' is not installed"**
-- Run `uv sync` again to install the updated dependencies
-- The `langgraph-cli[inmem]` extra includes langgraph-api
-- Or install manually: `uv add "langgraph-cli[inmem]"`
+- Run: `uv add "langgraph-cli[inmem]"` (this explicitly adds the inmem extra)
+- Or: `uv sync` should install it, but if not, use the add command above
+- The `[inmem]` extra is required for `langgraph dev` to work
 
 **"collections": [] - Qdrant is empty**
 - **You need to ingest documents first!**
