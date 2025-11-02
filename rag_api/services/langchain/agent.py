@@ -7,19 +7,9 @@ import os
 from langchain_core.language_models import BaseChatModel
 
 try:
-    from langchain_anthropic import ChatAnthropic
-except ImportError:
-    ChatAnthropic = None
-
-try:
     from langchain_openai import ChatOpenAI
 except ImportError:
     ChatOpenAI = None
-
-try:
-    from langchain_ollama import ChatOllama
-except ImportError:
-    ChatOllama = None
 
 from langgraph.prebuilt import create_react_agent
 
@@ -66,49 +56,20 @@ def configure_langsmith() -> None:
 
 
 def get_llm_model() -> BaseChatModel:
-    """Get the configured LLM model based on provider settings."""
+    """Get the configured LLM model for company API gateway."""
     settings = get_settings()
 
-    if settings.llm_provider == "openai":
-        if ChatOpenAI is None:
-            raise ImportError(
-                "langchain-openai is not installed. Install it with: uv add langchain-openai"
-            )
-        
-        openai_client = get_openai_client()
-        return ChatOpenAI(
-            model=settings.openai_model,
-            client=openai_client,
-            temperature=0,
+    if ChatOpenAI is None:
+        raise ImportError(
+            "langchain-openai is not installed. Install it with: uv add langchain-openai"
         )
-
-    elif settings.llm_provider == "anthropic":
-        if ChatAnthropic is None:
-            raise ImportError(
-                "langchain-anthropic is not installed. Install it with: uv add langchain-anthropic"
-            )
-        api_key = settings.anthropic_api_key
-        return ChatAnthropic(
-            model=settings.anthropic_model,
-            api_key=api_key,
-            temperature=0,
-        )
-
-    elif settings.llm_provider == "ollama":
-        if ChatOllama is None:
-            raise ImportError(
-                "langchain-ollama is not installed. Install it with: uv add langchain-ollama"
-            )
-        return ChatOllama(
-            model=settings.ollama_model,
-            base_url=settings.ollama_base_url,
-        )
-
-    else:
-        raise ValueError(
-            f"Unsupported LLM provider: {settings.llm_provider}. "
-            "Supported providers: 'ollama', 'openai', 'anthropic'"
-        )
+    
+    openai_client = get_openai_client()
+    return ChatOpenAI(
+        model=settings.openai_model,
+        client=openai_client,
+        temperature=0,
+    )
 
 
 def build_agent():

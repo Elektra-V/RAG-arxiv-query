@@ -24,16 +24,6 @@ try:
 except ImportError:
     OpenAI = None
 
-try:
-    from llama_index.llms.anthropic import Anthropic
-except ImportError:
-    Anthropic = None
-
-try:
-    from llama_index.llms.ollama import Ollama
-except ImportError:
-    Ollama = None
-
 from llama_index.vector_stores.qdrant import QdrantVectorStore
 
 from rag_api.clients.openai import get_openai_client
@@ -83,57 +73,21 @@ def get_llamaindex_embedding() -> BaseEmbedding:
 
 
 def get_llamaindex_llm() -> LLM:
-    """Get the configured LLM model based on provider settings."""
+    """Get the configured LLM model for company API gateway."""
     settings = get_settings()
 
-    if settings.llm_provider == "openai":
-        if OpenAI is None:
-            raise ImportError(
-                "llama-index-llms-openai is not installed. "
-                "Install it with: uv add llama-index-llms-openai"
-            )
-        
-        # Use the centralized OpenAI client factory
-        # This handles Basic auth encoding and client creation according to company API pattern
-        openai_client = get_openai_client()
-        
-        return OpenAI(
-            model=settings.openai_model,
-            client=openai_client,
-            temperature=0,
+    if OpenAI is None:
+        raise ImportError(
+            "llama-index-llms-openai is not installed. "
+            "Install it with: uv add llama-index-llms-openai"
         )
-
-    elif settings.llm_provider == "anthropic":
-        if Anthropic is None:
-            raise ImportError(
-                "llama-index-llms-anthropic is not installed. "
-                "Install it with: uv add llama-index-llms-anthropic"
-            )
-        # API key can be provided via env var ANTHROPIC_API_KEY or explicitly
-        api_key = settings.anthropic_api_key  # None if not set, SDK will use ANTHROPIC_API_KEY env var
-        return Anthropic(
-            model=settings.anthropic_model,
-            api_key=api_key,
-            temperature=0,
-        )
-
-    elif settings.llm_provider == "ollama":
-        if Ollama is None:
-            raise ImportError(
-                "llama-index-llms-ollama is not installed. "
-                "Install it with: uv add llama-index-llms-ollama"
-            )
-        return Ollama(
-            model=settings.ollama_model,
-            base_url=settings.ollama_base_url,
-            request_timeout=120.0,
-        )
-
-    else:
-        raise ValueError(
-            f"Unsupported LLM provider: {settings.llm_provider}. "
-            "Supported providers: 'ollama', 'openai', 'anthropic'"
-        )
+    
+    openai_client = get_openai_client()
+    return OpenAI(
+        model=settings.openai_model,
+        client=openai_client,
+        temperature=0,
+    )
 
 
 @lru_cache

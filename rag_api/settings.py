@@ -21,9 +21,9 @@ class Settings(BaseSettings):
     qdrant_url: str = "http://localhost:6334"
     qdrant_collection: str = "arxiv_papers"
 
-    # Model provider selection: "ollama", "openai", "anthropic", etc.
-    llm_provider: Literal["ollama", "openai", "anthropic"] = "ollama"
-    embedding_provider: Literal["huggingface", "openai"] = "huggingface"
+    # Model provider - company API gateway (OpenAI-compatible)
+    llm_provider: Literal["openai"] = "openai"
+    embedding_provider: Literal["huggingface", "openai"] = "openai"  # Default to OpenAI for company API
 
     # OpenAI configuration
     openai_api_key: Optional[str] = None
@@ -35,22 +35,11 @@ class Settings(BaseSettings):
     
     # Company API per-request headers (optional)
     # Format: "Header-Name:value" separated by commas
-    # These are passed as extra_headers in API calls if needed
-    # Example: "X-Request-ID:default-id" (matches company API pattern)
+    # Example: "X-Request-ID:default-id"
     company_api_extra_headers: Optional[str] = None
 
-    # Anthropic configuration
-    anthropic_api_key: Optional[str] = None
-    anthropic_model: str = "claude-3-5-sonnet-20241022"
-
-    # HuggingFace configuration (for local embeddings)
+    # HuggingFace configuration (optional fallback for local embeddings)
     huggingface_model: str = "sentence-transformers/all-MiniLM-L6-v2"
-
-    # Ollama configuration (for local LLM)
-    # Defaults to localhost for portability
-    # Docker Compose will override this via environment variable
-    ollama_model: str = "llama3.1:8b-instruct-q4_0"
-    ollama_base_url: str = "http://localhost:11434"
 
     # LangChain/LangSmith configuration
     langchain_api_key: Optional[str] = None
