@@ -85,6 +85,7 @@ def create_openai_client(
             f"(base_url={base_url}, username={username})"
         )
     
+    # Add OpenRouter-specific headers if using OpenRouter
     if base_url and "openrouter.ai" in base_url:
         settings = get_settings()
         if settings.openrouter_http_referer:
@@ -94,6 +95,21 @@ def create_openai_client(
         
         if default_headers.get("HTTP-Referer") or default_headers.get("X-Title"):
             logger.debug("Configured OpenRouter optional headers for rankings")
+    
+    # Add custom headers for company APIs (supports any gateway)
+    settings = get_settings()
+    if settings.company_api_extra_headers:
+        try:
+            # Parse format: "Header-Name:value" separated by commas
+            header_pairs = settings.company_api_extra_headers.split(",")
+            for pair in header_pairs:
+                pair = pair.strip()
+                if ":" in pair:
+                    header_name, header_value = pair.split(":", 1)
+                    default_headers[header_name.strip()] = header_value.strip()
+                    logger.debug(f"Added custom header: {header_name.strip()}")
+        except Exception as e:
+            logger.warning(f"Failed to parse company_api_extra_headers: {e}")
     
     client = OpenAI(
         api_key=api_key,

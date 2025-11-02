@@ -36,6 +36,10 @@ class Settings(BaseSettings):
     # OpenRouter optional headers (for rankings)
     openrouter_http_referer: Optional[str] = None  # Optional: Your site URL
     openrouter_x_title: Optional[str] = None  # Optional: Your site name
+    
+    # Company API custom headers (for any gateway requiring additional headers)
+    # Format: "Header-Name:value" separated by commas, e.g., "X-Custom-Header:value1,Another-Header:value2"
+    company_api_extra_headers: Optional[str] = None  # Optional: Custom headers for company APIs
 
     # Anthropic configuration
     anthropic_api_key: Optional[str] = None
