@@ -74,7 +74,7 @@ uv run langgraph dev --tunnel
 | `OPENAI_AUTH_USERNAME` | Basic auth username | `"my-username"` |
 | `OPENAI_AUTH_PASSWORD` | Basic auth password | `"my-password"` |
 | `OPENAI_MODEL` | **Qwen model with tooling** | `"Qwen2.5-7B-Instruct"` (default, recommended) |
-| `OPENAI_EMBEDDING_MODEL` | Embedding model (auto-detected) | Leave empty for auto-detection (recommended)<br/>- Qwen models → Qwen-compatible embeddings<br/>- Non-Qwen → `all-mpnet-base-v2` |
+| `OPENAI_EMBEDDING_MODEL` | Embedding model (auto-detected) | Leave empty for auto-detection (recommended)<br/>- Qwen models → `text-embedding-3-small`<br/>- Non-Qwen → `all-mpnet-base-v2_t2e` |
 | `OPENAI_API_KEY` | **Leave empty** (not needed!) | Omit or set to `""` |
 
 **Alternative Gateway Models:**
@@ -84,8 +84,13 @@ uv run langgraph dev --tunnel
 
 **Embedding Model Auto-Detection:**
 The system automatically selects the appropriate embedding model based on your LLM model:
-- **Qwen models** (Qwen2.5-7B-Instruct, Qwen2.5-VL-72B-Instruct, etc.) → Use Qwen-compatible embeddings (e.g., `qwen2.5-embedding`)
-- **Non-Qwen models** (Llama-3-SauerkrautLM, gpt-4o-mini, etc.) → Use `all-mpnet-base-v2`
+- **Qwen models** (Qwen2.5-7B-Instruct, Qwen2.5-VL-72B-Instruct, etc.) → Use `text-embedding-3-small` (or set to `text-embedding-3-large` for higher quality)
+- **Non-Qwen models** (Llama-3-SauerkrautLM, gpt-4o-mini, etc.) → Use `all-mpnet-base-v2_t2e`
+
+**Available Gateway Embedding Models:**
+- `text-embedding-3-small` - Fast, good quality (default for Qwen)
+- `text-embedding-3-large` - Higher quality, slower (alternative for Qwen)
+- `all-mpnet-base-v2_t2e` - Default for non-Qwen models
 
 You can override by setting `OPENAI_EMBEDDING_MODEL`, but auto-detection is recommended for optimal compatibility.
 

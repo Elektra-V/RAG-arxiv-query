@@ -61,36 +61,23 @@ def _get_embedding_model_for_llm(
     
     # Auto-detect based on LLM model
     if _is_qwen_model(llm_model):
-        # Qwen models need Qwen-compatible embeddings
-        # Common patterns (verify with company API docs):
-        # - qwen2.5-embedding
-        # - qwen2.5-vl-embedding (for VL models)
-        # - qwen2-embedding
-        
-        # For now, use a pattern-based approach
-        llm_lower = llm_model.lower()
-        if "vl" in llm_lower or "vision" in llm_lower:
-            # VL models might need specific embeddings
-            embedding_model = "qwen2.5-vl-embedding"
-        elif "2.5" in llm_lower:
-            embedding_model = "qwen2.5-embedding"
-        elif "2" in llm_lower:
-            embedding_model = "qwen2-embedding"
-        else:
-            # Fallback for other Qwen variants
-            embedding_model = "qwen2.5-embedding"
+        # Qwen models should use text-embedding-3-small or text-embedding-3-large
+        # (No separate Qwen-specific embedding models available on gateway)
+        # Using text-embedding-3-small as default for Qwen models
+        embedding_model = "text-embedding-3-small"
         
         logger.info(
-            f"Auto-detected Qwen LLM model '{llm_model}' - using Qwen-compatible "
-            f"embedding model '{embedding_model}'. "
-            f"If this fails, verify the exact model name in company API docs."
+            f"Auto-detected Qwen LLM model '{llm_model}' - using embedding model "
+            f"'{embedding_model}'. "
+            f"Alternative: Use 'text-embedding-3-large' for better quality."
         )
         return embedding_model
     else:
-        # Non-Qwen models use gateway default
-        embedding_model = "all-mpnet-base-v2"
+        # Non-Qwen models use all-mpnet-base-v2_t2e (note the _t2e suffix)
+        # Gateway has: all-mpnet-base-v2_t2e (not all-mpnet-base-v2)
+        embedding_model = "all-mpnet-base-v2_t2e"
         logger.debug(
-            f"Non-Qwen LLM model '{llm_model}' - using default embedding model "
+            f"Non-Qwen LLM model '{llm_model}' - using gateway embedding model "
             f"'{embedding_model}'"
         )
         return embedding_model
@@ -203,14 +190,25 @@ def get_embeddings() -> Embeddings:
         
         # Validate model name - ensure it's not a gateway/OpenAI model name
         model_name = settings.huggingface_model
-        gateway_model_names = ["all-mpnet-base-v2", "text-embedding-3-small", "text-embedding-3-large", "text-embedding-ada-002"]
+        gateway_model_names = [
+            "all-mpnet-base-v2_t2e",
+            "all-mpnet-base-v2",
+            "text-embedding-3-small",
+            "text-embedding-3-large",
+            "text-embedding-ada-002"
+        ]
         if model_name in gateway_model_names:
             raise ValueError(
-                f"Error: '{model_name}' is a gateway/OpenAI embedding model, not a HuggingFace model.\n"
+                f"Error: '{model_name}' is a gateway embedding model, not a HuggingFace model.\n"
                 f"\n"
-                f"For gateway embeddings (all-mpnet-base-v2) via Fraunhofer gateway:\n"
+                f"For gateway embeddings via Fraunhofer gateway:\n"
                 f"  Set EMBEDDING_PROVIDER='openai' (not 'huggingface')\n"
-                f"  Set OPENAI_EMBEDDING_MODEL='all-mpnet-base-v2' (per company API docs)\n"
+                f"  Set OPENAI_EMBEDDING_MODEL='{model_name}' or leave empty for auto-detection\n"
+                f"\n"
+                f"Available gateway embedding models:\n"
+                f"  - all-mpnet-base-v2_t2e (for non-Qwen models)\n"
+                f"  - text-embedding-3-small (for Qwen models, recommended)\n"
+                f"  - text-embedding-3-large (for Qwen models, higher quality)\n"
                 f"\n"
                 f"For local HuggingFace embeddings:\n"
                 f"  Set EMBEDDING_PROVIDER='huggingface'\n"
