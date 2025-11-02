@@ -54,7 +54,14 @@ def get_embeddings() -> Embeddings:
             raise ImportError(
                 "langchain-huggingface is not installed. Install it with: uv add langchain-huggingface"
             )
-        return HuggingFaceEmbeddings(model_name=settings.huggingface_model)
+        # Force CPU usage to avoid CUDA compatibility issues
+        # Set environment variable to prevent CUDA initialization
+        os.environ["CUDA_VISIBLE_DEVICES"] = ""
+        # Set device explicitly to CPU via model_kwargs
+        return HuggingFaceEmbeddings(
+            model_name=settings.huggingface_model,
+            model_kwargs={"device": "cpu"}
+        )
 
     else:
         raise ValueError(

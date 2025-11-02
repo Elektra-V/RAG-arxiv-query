@@ -67,7 +67,13 @@ def get_llamaindex_embedding() -> BaseEmbedding:
                 "llama-index-embeddings-huggingface is not installed. "
                 "Install it with: uv add llama-index-embeddings-huggingface"
             )
-        return HuggingFaceEmbedding(model_name=settings.huggingface_model)
+        # Force CPU usage to avoid CUDA compatibility issues
+        import os
+        os.environ["CUDA_VISIBLE_DEVICES"] = ""
+        return HuggingFaceEmbedding(
+            model_name=settings.huggingface_model,
+            device="cpu"
+        )
 
     else:
         raise ValueError(
