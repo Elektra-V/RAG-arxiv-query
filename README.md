@@ -1,43 +1,20 @@
-# RAG API - Complete Guide
+# RAG API - Company API Gateway
 
-**Everything you need in one place. Simple and clear.**
+**Retrieval Augmented Generation system for academic queries using company API gateway.**
 
 ---
 
-## 🚀 Quick Start (3 Steps)
+## 🚀 Quick Start
 
 ### 1. Setup Configuration
 ```bash
 cp env.example .env
-# Edit .env with your API credentials (see below)
 ```
 
-### 2. Start Services
-```bash
-# Option A: Docker (easiest - handles everything)
-docker compose up --build
+### 2. Configure Your Company API
 
-# Option B: Local (for debugging)
-uv sync
-docker run -d -p 6334:6333 qdrant/qdrant
-uv run langgraph dev --tunnel  # Opens Studio UI via tunnel (Safari-compatible)
-# Note: Use --tunnel flag for Safari or if localhost is blocked
-```
+Edit `.env` with your credentials:
 
-### 3. Ingest Documents (Required Before Querying!)
-```bash
-uv run rag-api-ingest --query "quantum computing" --max-docs 5
-```
-
-**Done!** Now you can query: http://localhost:9010/docs
-
----
-
-## 📝 Configuration (.env file)
-
-Open `.env` and configure one of these options:
-
-### Option 1: Company API (Production)
 ```env
 LLM_PROVIDER="openai"
 EMBEDDING_PROVIDER="openai"
@@ -45,77 +22,76 @@ OPENAI_BASE_URL="https://genai.iais.fraunhofer.de/api/v2"
 OPENAI_AUTH_USERNAME="your-username"
 OPENAI_AUTH_PASSWORD="your-password"
 OPENAI_API_KEY="xxxx"
-OPENAI_MODEL="gpt-4"
+OPENAI_MODEL="Llama-3-SauerkrautLM"
 OPENAI_EMBEDDING_MODEL="text-embedding-3-small"
 ```
 
-**Check available models:**
+### 3. Check Available Models
 ```bash
 uv run python check_company_models.py
 ```
 
-### Option 2: Local Testing (Free APIs)
+This connects to your company API and lists available models. Update `OPENAI_MODEL` in `.env` with the model you want to use.
 
-**⚠️ IMPORTANT NOTES:**
-- **402 Error**: OpenRouter requires credits for paid models
-- **429 Error**: Free models are rate-limited (wait 2-3 minutes or switch to Together AI)
+### 4. Install Dependencies & Start Services
+```bash
+# Install dependencies
+uv sync
 
-**Option 2A: Together AI (Free Tier - Recommended)**
-1. Go to: https://together.ai/
-2. Sign up (no credit card for free tier)
-3. Get API key from dashboard
-4. Add to `.env`:
+# Start Qdrant (vector database)
+docker compose up -d
+# OR manually: docker run -d -p 6334:6333 qdrant/qdrant
 
-```env
-LLM_PROVIDER="openai"
-EMBEDDING_PROVIDER="huggingface"  # FREE - no key needed!
-OPENAI_BASE_URL="https://api.together.xyz/v1"
-OPENAI_API_KEY="your-together-key"
-OPENAI_MODEL="meta-llama/Llama-3-8b-chat-hf"
-HUGGINGFACE_MODEL="sentence-transformers/all-MiniLM-L6-v2"
+# Ingest documents (REQUIRED before querying!)
+uv run rag-api-ingest --query "machine learning" --max-docs 5
+
+# Start server with tunnel (for Safari compatibility)
+uv run langgraph dev --tunnel
 ```
 
-**Option 2B: Ollama (100% Free, Local)**
-1. Install: `brew install ollama` (or see https://ollama.ai/)
-2. Start: `ollama serve`
-3. Pull model: `ollama pull llama3.1:8b`
-4. Add to `.env`:
+**Done!** The Studio UI URL will be displayed - use it to query your RAG system.
 
-```env
-LLM_PROVIDER="ollama"
-EMBEDDING_PROVIDER="huggingface"  # FREE!
-OLLAMA_MODEL="llama3.1:8b-instruct-q4_0"
-OLLAMA_BASE_URL="http://localhost:11434"
-HUGGINGFACE_MODEL="sentence-transformers/all-MiniLM-L6-v2"
+---
+
+## 📋 Configuration Reference
+
+### Required Settings
+
+| Setting | Description | Example |
+|---------|-------------|---------|
+| `LLM_PROVIDER` | Provider type | `"openai"` |
+| `OPENAI_BASE_URL` | Company API gateway URL | `"https://genai.iais.fraunhofer.de/api/v2"` |
+| `OPENAI_AUTH_USERNAME` | Basic auth username | `"my-username"` |
+| `OPENAI_AUTH_PASSWORD` | Basic auth password | `"my-password"` |
+| `OPENAI_API_KEY` | API key (use `"xxxx"` as placeholder) | `"xxxx"` |
+| `OPENAI_MODEL` | Model name from company API | `"Llama-3-SauerkrautLM"` |
+
+### Optional Settings
+
+- `EMBEDDING_PROVIDER`: `"openai"` or `"huggingface"` (free local embeddings)
+- `COMPANY_API_EXTRA_HEADERS`: Per-request headers (format: `"Header-Name:value"`)
+
+---
+
+## 🔍 How It Works
+
+The code automatically implements your company API pattern:
+
+```python
+# Automatically handled by rag_api/clients/openai.py:
+from base64 import b64encode
+
+token_string = f"{username}:{password}"
+token_bytes = b64encode(token_string.encode())
+
+client = OpenAI(
+    api_key="xxxx",
+    default_headers={"Authorization": f"Basic {token_bytes.decode()}"},
+    base_url="https://genai.iais.fraunhofer.de/api/v2"
+)
 ```
 
-**Option 2C: OpenRouter (Free Model Available!)**
-- **FREE model**: `qwen/qwen3-coder:free` (no credits needed!)
-- Sign up at: https://openrouter.ai/ (free account)
-- Get API key from dashboard
-- Add to `.env`:
-
-```env
-LLM_PROVIDER="openai"
-EMBEDDING_PROVIDER="huggingface"
-OPENAI_BASE_URL="https://openrouter.ai/api/v1"
-OPENAI_API_KEY="your-openrouter-key"
-OPENAI_MODEL="qwen/qwen3-coder:free"  # FREE!
-HUGGINGFACE_MODEL="sentence-transformers/all-MiniLM-L6-v2"
-```
-
-**Note**: Some OpenRouter models require credits, but `qwen/qwen3-coder:free` is completely free!
-
-### Option 3: Test Ingestion Only (No LLM API Key)
-```env
-LLM_PROVIDER="openai"  # Not used for ingestion
-EMBEDDING_PROVIDER="huggingface"  # FREE!
-HUGGINGFACE_MODEL="sentence-transformers/all-MiniLM-L6-v2"
-OPENAI_API_KEY=""  # Leave empty
-```
-
-This tests: Download papers → Create embeddings → Store in Qdrant  
-(No LLM querying, but ingestion works!)
+**No code changes needed** - just set your `.env` values!
 
 ---
 
@@ -123,57 +99,53 @@ This tests: Download papers → Create embeddings → Store in Qdrant
 
 ### Step 1: Ingest Documents (MUST DO FIRST!)
 
-**Your database is empty!** Populate it:
+Your database starts empty. Populate it:
 
 ```bash
-uv run rag-api-ingest --query "machine learning" --max-docs 5
+uv run rag-api-ingest --query "quantum computing" --max-docs 5
 ```
 
 **What happens:**
-- Downloads arXiv papers
-- Creates embeddings
-- Stores in Qdrant
+- Downloads arXiv papers matching your query
+- Creates embeddings (vector representations)
+- Stores in Qdrant vector database
 
-**Verify:**
+**Verify ingestion:**
 ```bash
-curl http://localhost:9010/status | grep collections
-# Should show: ["arxiv_papers"] instead of []
+curl http://localhost:6334/collections/arxiv_papers
+# Should show your documents with points_count > 0
 ```
 
 ### Step 2: Query the System
 
-**Option A: Via API**
+**Option A: LangGraph Studio (Recommended)**
+```bash
+uv run langgraph dev --tunnel
+# Use the Studio UI URL displayed
+# Interactive debugging and query interface
+```
+
+**Option B: Direct API**
 ```bash
 curl -X POST http://localhost:9010/query \
   -H "Content-Type: application/json" \
   -d '{"question": "What is quantum computing?", "debug": true}'
 ```
 
-**Option B: Via LangGraph Dev (Best for debugging)**
-```bash
-# With tunnel (for Safari or external access):
-uv run langgraph dev --tunnel
-# Opens Studio UI via Cloudflare tunnel - works in Safari!
+**Option C: API Documentation**
+- Open: http://localhost:9010/docs
+- Interactive API testing
 
-# Without tunnel (localhost only):
-uv run langgraph dev
-# Opens UI at http://localhost:8123 - interactive debugging!
-```
-
-**Option C: Via Web UI**
-- LangChain API: http://localhost:9010/docs
-- LlamaIndex UI: http://localhost:9020/
-
-### Step 3: Debug & Check Status
+### Step 3: Debug & Status
 
 ```bash
 # Detailed system info
 curl http://localhost:9010/debug | jq '.'
 
-# Check service status
+# Service status
 curl http://localhost:9010/status
 
-# Check Qdrant
+# Qdrant collections
 curl http://localhost:6334/collections
 ```
 
@@ -181,28 +153,30 @@ curl http://localhost:6334/collections
 
 ## 🔧 Troubleshooting
 
-**"Connection failed"**
-- Check credentials in `.env`
-- Test with: `uv run python check_company_models.py`
+### "Connection failed" or "Unauthorized"
+- Verify credentials in `.env` are correct
+- Test connection: `uv run python check_company_models.py`
+- Check if VPN or special network access is required
 
-**"Model not found"**
-- List models: `uv run python check_company_models.py`
-- Update `OPENAI_MODEL` in `.env`
+### "Model not found"
+- List available models: `uv run python check_company_models.py`
+- Update `OPENAI_MODEL` in `.env` with correct model name
 
-**"port is already allocated"**
-- Docker Compose already started Qdrant - don't start it again!
-- Or stop everything: `docker compose down`
-
-**"collections": [] - Empty database**
+### "collections": [] - Empty database
 - **You must ingest documents first!**
 - Run: `uv run rag-api-ingest --query "topic" --max-docs 5`
 
-**"langgraph: command not found"**
-- Run: `uv sync` first
-- Then use: `uv run langgraph dev`
+### "Port already in use"
+- Qdrant already running: `docker ps | grep qdrant`
+- Or stop everything: `docker compose down`
 
-**"Module not found"**
-- **CRITICAL**: Run `uv sync` before starting services!
+### "langgraph: command not found"
+- Run: `uv sync` first
+- Then: `uv run langgraph dev --tunnel`
+
+### Safari blocks localhost
+- Always use `--tunnel` flag: `uv run langgraph dev --tunnel`
+- This creates a secure Cloudflare tunnel (HTTPS URL)
 
 ---
 
@@ -211,63 +185,60 @@ curl http://localhost:6334/collections
 ```
 rag-api/
 ├── .env                      # Your configuration (copy from env.example)
-├── README.md                 # This file - everything you need!
 ├── env.example               # Configuration template
-├── pyproject.toml            # Dependencies
-├── docker-compose.yml        # Docker setup
-├── langgraph.json            # LangGraph config
-├── check_company_models.py   # List available models
+├── check_company_models.py   # List available models from company API
 ├── check_setup.py            # Verify your setup
-└── rag_api/                  # Source code
-    ├── settings.py           # Configuration
-    ├── clients/              # API clients (OpenAI, Qdrant)
-    ├── ingestion/           # Document ingestion
-    └── services/            # API services (LangChain, LlamaIndex)
+├── rag_api/
+│   ├── settings.py           # Configuration loader
+│   ├── clients/              # API clients (OpenAI, Qdrant, embeddings)
+│   ├── ingestion/            # Document ingestion pipeline
+│   └── services/             # API services (LangChain, LlamaIndex)
+└── docker-compose.yml         # Docker services (Qdrant)
 ```
 
 ---
 
-## 🎯 What This Project Does
+## 🎯 What This System Does
 
-- **Downloads** arXiv papers based on query
-- **Creates embeddings** (vector representations)
-- **Stores** in Qdrant (vector database)
-- **Queries** using RAG (Retrieval Augmented Generation)
-- **Answers** questions using LLM + retrieved context
+1. **Downloads** arXiv papers based on search query
+2. **Creates embeddings** (vector representations using OpenAI or HuggingFace)
+3. **Stores** in Qdrant (vector database for similarity search)
+4. **Retrieves** relevant documents for user questions
+5. **Generates** answers using LLM with retrieved context (RAG)
 
 **Services:**
-- LangChain API (port 9010): RAG agent with web search
-- LlamaIndex API (port 9020): Direct RAG queries
-- Ingestion (port 9030): Document processing
-- Qdrant (port 6334): Vector database
-
----
-
-## 🚀 Docker Commands
-
-```bash
-# Start everything
-docker compose up --build
-
-# Stop everything
-docker compose down
-
-# View logs
-docker compose logs -f langchain
-
-# Clean start (remove old containers)
-docker compose up --build --remove-orphans
-```
+- **Qdrant** (port 6334): Vector database
+- **LangGraph API** (port 9010): RAG agent with tools
+- **LlamaIndex API** (port 9020): Direct RAG queries
+- **Ingestion** (port 9030): Document processing
 
 ---
 
 ## 💡 Tips
 
-- **Start with ingestion-only testing** (no LLM key needed) to verify pipeline
-- **Use LangGraph Dev** (`uv run langgraph dev`) for best debugging experience
-- **Check status** with `/debug` endpoint for detailed system info
-- **Ports changed** to 9000+ range to avoid conflicts
+- **Use `--tunnel` flag**: Always run `uv run langgraph dev --tunnel` for Safari compatibility
+- **Check models first**: Always run `check_company_models.py` before setting `OPENAI_MODEL`
+- **Ingest before querying**: Your database starts empty - ingest documents first!
+- **Use HuggingFace embeddings**: Set `EMBEDDING_PROVIDER="huggingface"` for free local embeddings (no API calls)
 
 ---
 
-**Need help?** Check troubleshooting section above or use `/debug` endpoint!
+## 🐳 Docker Commands
+
+```bash
+# Start Qdrant
+docker compose up -d
+
+# Stop everything
+docker compose down
+
+# View logs
+docker compose logs -f
+
+# Clean restart
+docker compose down && docker compose up --build
+```
+
+---
+
+**Ready to use!** Configure your `.env`, ingest documents, and start querying. 🚀
