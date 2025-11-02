@@ -170,8 +170,10 @@ curl http://localhost:6334/collections
 - Run: `uv run rag-api-ingest --query "topic" --max-docs 5`
 
 ### "Port already in use"
-- Qdrant already running: `docker ps | grep qdrant`
-- Or stop everything: `docker compose down`
+- **Check what's using the port**: `lsof -i :6334` or `docker ps | grep qdrant`
+- **Stop containers**: `docker compose down`
+- **Kill specific process**: `kill -9 <PID>` (from lsof output)
+- **Remove stuck containers**: `docker compose down --remove-orphans`
 
 ### "langgraph: command not found"
 - Run: `uv sync` first
@@ -240,19 +242,115 @@ rag-api/
 
 ## 🐳 Docker Commands
 
+### Basic Commands
+
 ```bash
-# Start Qdrant
+# Start Qdrant only (recommended for local development)
+docker compose up -d qdrant
+
+# Start all services (if using Docker for everything)
 docker compose up -d
 
-# Stop everything
+# Stop all services
 docker compose down
+
+# Stop and remove volumes (clears Qdrant data)
+docker compose down -v
 
 # View logs
 docker compose logs -f
+docker compose logs -f qdrant  # Specific service logs
 
-# Clean restart
-docker compose down && docker compose up --build
+# Check running containers
+docker compose ps
+docker ps | grep qdrant  # Check if Qdrant is running
 ```
+
+### Troubleshooting & Cleanup Commands
+
+```bash
+# Remove orphan containers and clean up
+docker compose down --remove-orphans
+
+# Force remove and recreate containers
+docker compose down --remove-orphans && docker compose up -d --force-recreate
+
+# Clear Docker build cache (fixes stale build issues)
+docker builder prune -f
+
+# Remove unused containers, networks, images (safe cleanup)
+docker system prune -f
+
+# Full cleanup (removes everything including volumes - WARNING: deletes data!)
+docker system prune -a --volumes -f
+
+# Clean rebuild without cache (fixes build issues)
+docker compose build --no-cache
+docker compose up -d
+
+# Check for port conflicts
+docker ps | grep -E "6334|9010|9020|9030"
+lsof -i :6334  # Check if port 6334 is in use
+lsof -i :9010  # Check if port 9010 is in use
+
+# Remove specific container if stuck
+docker rm -f $(docker ps -aq --filter "name=qdrant")
+docker rm -f $(docker ps -aq --filter "name=rag-api")
+```
+
+### Common Problem Fixes
+
+**Problem: Port already in use**
+```bash
+# Find what's using the port
+lsof -i :6334
+# Kill the process or stop the container
+docker compose down
+# Or kill specific process: kill -9 <PID>
+```
+
+**Problem: Stale containers/orphans**
+```bash
+# Remove orphans and restart
+docker compose down --remove-orphans
+docker compose up -d
+```
+
+**Problem: Build cache issues**
+```bash
+# Clean rebuild
+docker compose build --no-cache --pull
+docker compose up -d
+```
+
+**Problem: Volume/data conflicts**
+```bash
+# Reset Qdrant data (careful: deletes all stored documents!)
+docker compose down -v
+docker volume rm rag-api_qdrant_data  # If volume exists
+docker compose up -d
+```
+
+**Problem: Container won't start**
+```bash
+# Check logs for errors
+docker compose logs qdrant
+# Restart specific service
+docker compose restart qdrant
+# Force recreate
+docker compose up -d --force-recreate qdrant
+```
+
+### Quick Reference
+
+| Command | Purpose |
+|---------|---------|
+| `docker compose up -d qdrant` | Start Qdrant only |
+| `docker compose down --remove-orphans` | Clean shutdown |
+| `docker compose build --no-cache` | Rebuild without cache |
+| `docker system prune -f` | Clean unused resources |
+| `docker compose logs -f qdrant` | View Qdrant logs |
+| `docker compose ps` | Check running services |
 
 ---
 
