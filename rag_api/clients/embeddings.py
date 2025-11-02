@@ -33,12 +33,7 @@ def get_embeddings() -> Embeddings:
         
         # OpenAIEmbeddings needs api_key, base_url, and default_headers
         # Gateway doesn't support encoding_format='base64' parameter
-        # Use client parameter and override embedding creation to remove encoding_format
-        from rag_api.clients.openai import get_openai_client
-        openai_client = get_openai_client()
-        
-        # Create OpenAIEmbeddings with client to control embedding creation
-        # We'll need to handle encoding_format removal via client monkey-patch or subclass
+        # We need to wrap the embedding creation to remove this parameter
         api_key = settings.openai_api_key or "xxxx"
         base_url = settings.openai_base_url
         
@@ -55,20 +50,35 @@ def get_embeddings() -> Embeddings:
             openai_api_key=api_key,  # Placeholder "xxxx" for Gateway (Basic auth used)
             openai_api_base=base_url,  # Gateway endpoint
             default_headers=default_headers,  # Basic auth header
-            client=openai_client,  # Use our configured client
         )
         
-        # Override the embeddings.client.embeddings.create to remove encoding_format
-        # Gateway doesn't support encoding_format='base64' parameter
-        original_create = embeddings.client.embeddings.create
+        # Gateway doesn't support encoding_format parameter
+        # Wrap the embedding creation to remove it from requests
+        original_embed_query = embeddings.embed_query
+        original_embed_documents = embeddings.embed_documents
         
-        def create_without_encoding_format(*args, **kwargs):
-            # Remove encoding_format if present (gateway doesn't support it)
-            if 'encoding_format' in kwargs:
-                del kwargs['encoding_format']
-            return original_create(*args, **kwargs)
+        def embed_query_wrapper(text: str) -> list[float]:
+            # Use _embedding_func which bypasses encoding_format
+            return embeddings._embedding_func([text])[0]
         
-        embeddings.client.embeddings.create = create_without_encoding_format
+        def embed_documents_wrapper(texts: list[str]) -> list[list[float]]:
+            # Use _embedding_func which bypasses encoding_format
+            return embeddings._embedding_func(texts)
+        
+        # Override methods to remove encoding_format
+        embeddings.embed_query = embed_query_wrapper
+        embeddings.embed_documents = embed_documents_wrapper
+        
+        # Also patch the client's embeddings.create method
+        if hasattr(embeddings, 'client') and hasattr(embeddings.client, 'embeddings'):
+            original_create = embeddings.client.embeddings.create
+            
+            def create_without_encoding_format(**kwargs):
+                # Remove encoding_format if present
+                kwargs.pop('encoding_format', None)
+                return original_create(**kwargs)
+            
+            embeddings.client.embeddings.create = create_without_encoding_format
         
         return embeddings
 
