@@ -31,7 +31,7 @@ class Settings(BaseSettings):
     openai_auth_username: Optional[str] = None  # Gateway Basic auth username (required for gateway mode)
     openai_auth_password: Optional[str] = None  # Gateway Basic auth password (required for gateway mode)
     openai_model: str = "Qwen2.5-7B-Instruct"  # Default: Free Qwen model with full tooling/function calling support
-    openai_embedding_model: str = "all-mpnet-base-v2"  # Gateway embedding model (per company API docs)
+    openai_embedding_model: Optional[str] = None  # Auto-detected based on LLM model (Qwen models use Qwen-compatible embeddings)
     
     # OpenAI Platform mode (fallback only - paid, when Basic auth not provided)
     openai_api_key: Optional[str] = None  # Optional: Only needed for OpenAI Platform direct access (paid)

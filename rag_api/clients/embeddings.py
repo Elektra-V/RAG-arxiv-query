@@ -1,8 +1,10 @@
 """Embedding utilities."""
 
+import logging
 import os
 from functools import lru_cache
 from base64 import b64encode
+from typing import Optional
 
 from langchain_core.embeddings import Embeddings
 
@@ -17,6 +19,81 @@ except ImportError:
     HuggingFaceEmbeddings = None
 
 from rag_api.settings import get_settings
+
+logger = logging.getLogger(__name__)
+
+
+def _is_qwen_model(model_name: str) -> bool:
+    """Check if the model name is a Qwen model.
+    
+    Args:
+        model_name: The LLM model name (e.g., "Qwen2.5-7B-Instruct")
+        
+    Returns:
+        True if the model is a Qwen model, False otherwise
+    """
+    if not model_name:
+        return False
+    return model_name.lower().startswith("qwen")
+
+
+def _get_embedding_model_for_llm(
+    llm_model: str,
+    user_override: Optional[str] = None
+) -> str:
+    """Automatically select the appropriate embedding model based on LLM model.
+    
+    Rules:
+    - Qwen LLM models require Qwen-compatible embedding models
+    - Non-Qwen models use all-mpnet-base-v2 (gateway default)
+    - User override via OPENAI_EMBEDDING_MODEL takes precedence
+    
+    Args:
+        llm_model: The LLM model name (e.g., "Qwen2.5-7B-Instruct")
+        user_override: Manual embedding model override from settings (optional)
+        
+    Returns:
+        The embedding model name to use
+    """
+    # User override takes precedence
+    if user_override:
+        return user_override
+    
+    # Auto-detect based on LLM model
+    if _is_qwen_model(llm_model):
+        # Qwen models need Qwen-compatible embeddings
+        # Common patterns (verify with company API docs):
+        # - qwen2.5-embedding
+        # - qwen2.5-vl-embedding (for VL models)
+        # - qwen2-embedding
+        
+        # For now, use a pattern-based approach
+        llm_lower = llm_model.lower()
+        if "vl" in llm_lower or "vision" in llm_lower:
+            # VL models might need specific embeddings
+            embedding_model = "qwen2.5-vl-embedding"
+        elif "2.5" in llm_lower:
+            embedding_model = "qwen2.5-embedding"
+        elif "2" in llm_lower:
+            embedding_model = "qwen2-embedding"
+        else:
+            # Fallback for other Qwen variants
+            embedding_model = "qwen2.5-embedding"
+        
+        logger.info(
+            f"Auto-detected Qwen LLM model '{llm_model}' - using Qwen-compatible "
+            f"embedding model '{embedding_model}'. "
+            f"If this fails, verify the exact model name in company API docs."
+        )
+        return embedding_model
+    else:
+        # Non-Qwen models use gateway default
+        embedding_model = "all-mpnet-base-v2"
+        logger.debug(
+            f"Non-Qwen LLM model '{llm_model}' - using default embedding model "
+            f"'{embedding_model}'"
+        )
+        return embedding_model
 
 
 @lru_cache
@@ -36,6 +113,37 @@ def get_embeddings() -> Embeddings:
         # 2. Doesn't support encoding_format='base64' (must be removed)
         # 3. Input must be text strings, not token IDs (disable tokenization)
         
+        # Auto-detect embedding model based on LLM model
+        # Qwen models require Qwen-compatible embeddings
+        embedding_model = _get_embedding_model_for_llm(
+            llm_model=settings.openai_model,
+            user_override=settings.openai_embedding_model
+        )
+        
+        # Validate compatibility if user manually set embedding model
+        if settings.openai_embedding_model and settings.openai_embedding_model != embedding_model:
+            is_qwen_llm = _is_qwen_model(settings.openai_model)
+            is_qwen_embedding = _is_qwen_model(settings.openai_embedding_model)
+            
+            if is_qwen_llm and not is_qwen_embedding:
+                logger.warning(
+                    f"⚠️  Model mismatch detected: Qwen LLM model '{settings.openai_model}' "
+                    f"with non-Qwen embedding model '{settings.openai_embedding_model}'. "
+                    f"Qwen models require Qwen-compatible embeddings. "
+                    f"Consider removing OPENAI_EMBEDDING_MODEL to auto-detect."
+                )
+            elif not is_qwen_llm and is_qwen_embedding:
+                logger.warning(
+                    f"⚠️  Model mismatch detected: Non-Qwen LLM model '{settings.openai_model}' "
+                    f"with Qwen embedding model '{settings.openai_embedding_model}'. "
+                    f"Using user override, but this may not be optimal."
+                )
+        else:
+            # Using auto-detected model
+            logger.debug(
+                f"Using embedding model '{embedding_model}' for LLM '{settings.openai_model}'"
+            )
+        
         api_key = settings.openai_api_key or "xxxx"
         base_url = settings.openai_base_url
         
@@ -48,7 +156,7 @@ def get_embeddings() -> Embeddings:
         
         # Create embeddings with gateway-compatible settings
         embeddings = OpenAIEmbeddings(
-            model=settings.openai_embedding_model,
+            model=embedding_model,  # Use auto-detected or user override
             openai_api_key=api_key,
             openai_api_base=base_url,
             default_headers=default_headers,

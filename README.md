@@ -29,7 +29,8 @@ OPENAI_BASE_URL="https://genai.iais.fraunhofer.de/api/v2"
 OPENAI_AUTH_USERNAME="your-username"
 OPENAI_AUTH_PASSWORD="your-password"
 OPENAI_MODEL="Qwen2.5-7B-Instruct"  # FREE Qwen with full tooling support!
-OPENAI_EMBEDDING_MODEL="all-mpnet-base-v2"  # Gateway embedding model (per company API docs)
+# OPENAI_EMBEDDING_MODEL=""  # Leave empty for auto-detection (recommended!)
+# Qwen models automatically use Qwen-compatible embeddings
 # OPENAI_API_KEY=""  # Leave empty - NOT needed for gateway!
 ```
 
@@ -73,13 +74,20 @@ uv run langgraph dev --tunnel
 | `OPENAI_AUTH_USERNAME` | Basic auth username | `"my-username"` |
 | `OPENAI_AUTH_PASSWORD` | Basic auth password | `"my-password"` |
 | `OPENAI_MODEL` | **Qwen model with tooling** | `"Qwen2.5-7B-Instruct"` (default, recommended) |
-| `OPENAI_EMBEDDING_MODEL` | Gateway embedding model | `"all-mpnet-base-v2"` (per company API docs) |
+| `OPENAI_EMBEDDING_MODEL` | Embedding model (auto-detected) | Leave empty for auto-detection (recommended)<br/>- Qwen models → Qwen-compatible embeddings<br/>- Non-Qwen → `all-mpnet-base-v2` |
 | `OPENAI_API_KEY` | **Leave empty** (not needed!) | Omit or set to `""` |
 
 **Alternative Gateway Models:**
-- `"Qwen2.5-VL-72B-Instruct"` - Larger Qwen model
-- `"Llama-3-SauerkrautLM"` - German-focused model
-- `"gpt-4o-mini"` - GPT model (if available on gateway)
+- `"Qwen2.5-VL-72B-Instruct"` - Larger Qwen model (auto-uses Qwen-compatible embeddings)
+- `"Llama-3-SauerkrautLM"` - German-focused model (auto-uses all-mpnet-base-v2)
+- `"gpt-4o-mini"` - GPT model (if available on gateway, auto-uses all-mpnet-base-v2)
+
+**Embedding Model Auto-Detection:**
+The system automatically selects the appropriate embedding model based on your LLM model:
+- **Qwen models** (Qwen2.5-7B-Instruct, Qwen2.5-VL-72B-Instruct, etc.) → Use Qwen-compatible embeddings (e.g., `qwen2.5-embedding`)
+- **Non-Qwen models** (Llama-3-SauerkrautLM, gpt-4o-mini, etc.) → Use `all-mpnet-base-v2`
+
+You can override by setting `OPENAI_EMBEDDING_MODEL`, but auto-detection is recommended for optimal compatibility.
 
 ### Optional: OpenAI Platform Mode (Advanced - Paid)
 
