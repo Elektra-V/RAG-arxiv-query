@@ -131,35 +131,90 @@ def get_embeddings() -> Embeddings:
                 f"Using embedding model '{embedding_model}' for LLM '{settings.openai_model}'"
             )
         
-        api_key = settings.openai_api_key or "xxxx"
         base_url = settings.openai_base_url
         
         # Build Basic auth header
         default_headers = None
-        if settings.openai_auth_username and settings.openai_auth_password:
+        has_basic_auth = settings.openai_auth_username and settings.openai_auth_password
+        
+        if has_basic_auth:
             token_string = f"{settings.openai_auth_username}:{settings.openai_auth_password}"
             token_bytes = b64encode(token_string.encode())
             default_headers = {"Authorization": f"Basic {token_bytes.decode()}"}
         
+        # For Basic auth, use empty string for api_key (SDK validation, but Basic auth takes precedence)
+        # For Platform mode, use the provided API key
+        # Note: SDK may require api_key parameter, but Basic auth header will be used
+        if has_basic_auth:
+            # Basic auth mode: Use empty string to satisfy SDK validation
+            # The default_headers with Basic auth will actually be used
+            api_key = ""
+        else:
+            # Platform mode: Use actual API key
+            api_key = settings.openai_api_key or "xxxx"
+        
         # Create embeddings with gateway-compatible settings
         embeddings = OpenAIEmbeddings(
             model=embedding_model,  # Use auto-detected or user override
-            openai_api_key=api_key,
+            openai_api_key=api_key if api_key else None,  # Empty string or None for Basic auth
             openai_api_base=base_url,
             default_headers=default_headers,
             tiktoken_enabled=False,  # Gateway needs text, not token IDs
             check_embedding_ctx_length=False,  # Disable length checking to avoid HuggingFace tokenizer fallback
         )
         
-        # Patch create method: Remove encoding_format and ensure input format
+        # Patch to remove encoding_format from request body (gateway doesn't support it)
+        # The SDK adds encoding_format internally via parameter models, so we intercept at request level
+        # We need to patch both the Embeddings resource's _post AND the underlying OpenAI client's _post
+        embeddings_resource = embeddings.client
+        
+        def remove_encoding_format_from_request(*args, **kwargs):
+            """Helper to remove encoding_format from request in multiple possible locations."""
+            # Check if json_data is passed directly as kwarg
+            if 'json_data' in kwargs and isinstance(kwargs['json_data'], dict):
+                kwargs['json_data'].pop('encoding_format', None)
+            # Also check if it's in the body directly (some SDK versions)
+            if 'body' in kwargs and isinstance(kwargs['body'], dict):
+                kwargs['body'].pop('encoding_format', None)
+            # Check if json_data is in a FinalRequestOptions object (first positional arg)
+            if args and hasattr(args[0], 'json_data') and isinstance(args[0].json_data, dict):
+                args[0].json_data.pop('encoding_format', None)
+        
+        # Patch the Embeddings resource's _post method (embeddings.client._post)
+        if hasattr(embeddings_resource, '_post'):
+            original_resource_post = embeddings_resource._post
+            
+            def resource_post_fixed(*args, **kwargs):
+                remove_encoding_format_from_request(*args, **kwargs)
+                return original_resource_post(*args, **kwargs)
+            
+            embeddings_resource._post = resource_post_fixed
+        
+        # Get the underlying OpenAI client and patch its _post method too
+        openai_client = None
+        if hasattr(embeddings_resource, '_client'):
+            openai_client = embeddings_resource._client
+        elif hasattr(embeddings, '_client'):
+            openai_client = embeddings._client
+        
+        if openai_client and hasattr(openai_client, '_post'):
+            original_post = openai_client._post
+            
+            def post_fixed(*args, **kwargs):
+                remove_encoding_format_from_request(*args, **kwargs)
+                return original_post(*args, **kwargs)
+            
+            openai_client._post = post_fixed
+        
+        # Patch create method: Remove encoding_format from kwargs and ensure input format
         # Gateway requirements:
         # - input must be list: ["text"] not "text"
-        # - response.data[0].embedding (singular, not embeddings)
+        # - encoding_format must be removed (also patched at _post level)
         if hasattr(embeddings.client, 'create'):
             original_create = embeddings.client.create
             
             def create_fixed(**kwargs):
-                kwargs.pop('encoding_format', None)  # Gateway doesn't support this
+                kwargs.pop('encoding_format', None)  # Remove from kwargs
                 
                 # Ensure input is always a list (gateway requirement)
                 if 'input' in kwargs and isinstance(kwargs['input'], str):
@@ -171,6 +226,47 @@ def get_embeddings() -> Embeddings:
         
         # Patch async client too
         if hasattr(embeddings, 'async_client') and hasattr(embeddings.async_client, 'create'):
+            async_embeddings_resource = embeddings.async_client
+            
+            async def remove_encoding_format_from_async_request(*args, **kwargs):
+                """Helper to remove encoding_format from async request."""
+                # Check if json_data is passed directly as kwarg
+                if 'json_data' in kwargs and isinstance(kwargs['json_data'], dict):
+                    kwargs['json_data'].pop('encoding_format', None)
+                # Check if it's in the body directly (some SDK versions)
+                if 'body' in kwargs and isinstance(kwargs['body'], dict):
+                    kwargs['body'].pop('encoding_format', None)
+                # Check if json_data is in a FinalRequestOptions object (first positional arg)
+                if args and hasattr(args[0], 'json_data') and isinstance(args[0].json_data, dict):
+                    args[0].json_data.pop('encoding_format', None)
+            
+            # Patch the async Embeddings resource's _post method
+            if hasattr(async_embeddings_resource, '_post'):
+                original_async_resource_post = async_embeddings_resource._post
+                
+                async def async_resource_post_fixed(*args, **kwargs):
+                    await remove_encoding_format_from_async_request(*args, **kwargs)
+                    return await original_async_resource_post(*args, **kwargs)
+                
+                async_embeddings_resource._post = async_resource_post_fixed
+            
+            # Get the underlying async OpenAI client and patch its _post method too
+            async_openai_client = None
+            if hasattr(async_embeddings_resource, '_client'):
+                async_openai_client = async_embeddings_resource._client
+            elif hasattr(embeddings, '_async_client'):
+                async_openai_client = embeddings._async_client
+            
+            if async_openai_client and hasattr(async_openai_client, '_post'):
+                original_async_post = async_openai_client._post
+                
+                async def async_post_fixed(*args, **kwargs):
+                    await remove_encoding_format_from_async_request(*args, **kwargs)
+                    return await original_async_post(*args, **kwargs)
+                
+                async_openai_client._post = async_post_fixed
+            
+            # Patch async create method
             original_async_create = embeddings.async_client.create
             
             def create_async_fixed(**kwargs):
