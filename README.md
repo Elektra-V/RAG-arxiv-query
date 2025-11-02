@@ -1,6 +1,13 @@
-# RAG API - Company API Gateway
+# RAG API - Gateway with Qwen Tooling Model
 
-**Retrieval Augmented Generation system for academic queries using company API gateway.**
+**Retrieval Augmented Generation system using company API gateway with free Qwen model (full tooling support).**
+
+## ✨ Features
+
+- **FREE** Qwen models with full tooling/function calling support
+- Gateway mode with Basic auth (no API key needed)
+- Fast embeddings via gateway (no CUDA issues)
+- Ready-to-use RAG pipeline with academic paper queries
 
 ---
 
@@ -11,19 +18,19 @@
 cp env.example .env
 ```
 
-### 2. Configure Your Company API
+### 2. Configure Gateway (Free Qwen Models)
 
-Edit `.env` with your credentials:
+Edit `.env` with your gateway credentials:
 
 ```env
 LLM_PROVIDER="openai"
-EMBEDDING_PROVIDER="openai"  # Recommended: Uses company API (fast, no CUDA issues)
+EMBEDDING_PROVIDER="openai"  # Uses gateway (fast, no CUDA issues)
 OPENAI_BASE_URL="https://genai.iais.fraunhofer.de/api/v2"
 OPENAI_AUTH_USERNAME="your-username"
 OPENAI_AUTH_PASSWORD="your-password"
-OPENAI_API_KEY="xxxx"
-OPENAI_MODEL="Llama-3-SauerkrautLM"
-OPENAI_EMBEDDING_MODEL="text-embedding-3-small"  # Embedding model from company API
+OPENAI_MODEL="Qwen2.5-7B-Instruct"  # FREE Qwen with full tooling support!
+OPENAI_EMBEDDING_MODEL="text-embedding-3-small"
+# OPENAI_API_KEY=""  # Leave empty - NOT needed for gateway!
 ```
 
 ### 3. Check Available Models
@@ -56,31 +63,34 @@ uv run langgraph dev --tunnel
 
 ## 📋 Configuration Reference
 
-### Required Settings
+### Required Settings - Gateway Mode (Recommended)
 
-**Choose ONE authentication mode:**
+**Gateway mode is the primary and recommended setup - FREE Qwen models with tooling support!**
 
-**Gateway Mode (Free models, recommended):**
 | Setting | Description | Example |
 |---------|-------------|---------|
 | `OPENAI_BASE_URL` | Company API gateway URL | `"https://genai.iais.fraunhofer.de/api/v2"` |
 | `OPENAI_AUTH_USERNAME` | Basic auth username | `"my-username"` |
 | `OPENAI_AUTH_PASSWORD` | Basic auth password | `"my-password"` |
-| `OPENAI_API_KEY` | Leave empty (not needed for gateway) | `""` or omit |
+| `OPENAI_MODEL` | **Qwen model with tooling** | `"Qwen2.5-7B-Instruct"` (default, recommended) |
+| `OPENAI_EMBEDDING_MODEL` | Embedding model | `"text-embedding-3-small"` |
+| `OPENAI_API_KEY` | **Leave empty** (not needed!) | Omit or set to `""` |
 
-**Platform Mode (Paid, OpenAI Platform direct access):**
+**Alternative Gateway Models:**
+- `"Qwen2.5-VL-72B-Instruct"` - Larger Qwen model
+- `"Llama-3-SauerkrautLM"` - German-focused model
+- `"gpt-4o-mini"` - GPT model (if available on gateway)
+
+### Optional: OpenAI Platform Mode (Advanced - Paid)
+
+Only use if you need direct OpenAI Platform access. Gateway mode above is FREE and recommended!
+
 | Setting | Description | Example |
 |---------|-------------|---------|
 | `OPENAI_BASE_URL` | OpenAI Platform URL | `"https://api.openai.com/v1"` |
 | `OPENAI_API_KEY` | Your OpenAI Platform API key | `"sk-..."` |
-| `OPENAI_AUTH_USERNAME` | Leave empty | `""` or omit |
-| `OPENAI_AUTH_PASSWORD` | Leave empty | `""` or omit |
-
-**Model Settings:**
-| Setting | Description | Example |
-|---------|-------------|---------|
-| `OPENAI_MODEL` | Model name | Gateway: `"Qwen2.5-7B-Instruct"`, Platform: `"gpt-4o-mini"` |
-| `OPENAI_EMBEDDING_MODEL` | Embedding model | `"text-embedding-3-small"` |
+| `OPENAI_AUTH_USERNAME` | Leave empty | Omit |
+| `OPENAI_AUTH_PASSWORD` | Leave empty | Omit |
 
 ### Optional Settings
 
@@ -93,7 +103,7 @@ uv run langgraph dev --tunnel
 
 ## 🔍 How It Works
 
-The code automatically implements your company API pattern:
+The code automatically handles Gateway authentication (Basic auth) for free Qwen models:
 
 ```python
 # Automatically handled by rag_api/clients/openai.py:
@@ -103,12 +113,13 @@ token_string = f"{username}:{password}"
 token_bytes = b64encode(token_string.encode())
 
 client = OpenAI(
-    api_key="xxxx",
-    default_headers={"Authorization": f"Basic {token_bytes.decode()}"},
-    base_url="https://genai.iais.fraunhofer.de/api/v2"
+    base_url="https://genai.iais.fraunhofer.de/api/v2",
+    default_headers={"Authorization": f"Basic {token_bytes.decode()}"}
+    # No api_key needed for gateway mode!
 )
 ```
 
+**Gateway mode (recommended):** Basic auth only - FREE Qwen models with full tooling support!  
 **No code changes needed** - just set your `.env` values!
 
 ---

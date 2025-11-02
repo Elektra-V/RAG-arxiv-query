@@ -23,15 +23,18 @@ class Settings(BaseSettings):
 
     # Model provider - company API gateway (OpenAI-compatible)
     llm_provider: Literal["openai"] = "openai"
-    embedding_provider: Literal["huggingface", "openai"] = "openai"  # Default to OpenAI for company API
+    embedding_provider: Literal["huggingface", "openai"] = "openai"  # Default: Uses gateway (fast, no CUDA issues)
 
-    # OpenAI configuration
+    # OpenAI configuration - Gateway mode (primary, recommended)
+    # Gateway mode uses Basic auth for free models like Qwen with tooling support
+    openai_base_url: Optional[str] = None  # Gateway URL: https://genai.iais.fraunhofer.de/api/v2
+    openai_auth_username: Optional[str] = None  # Gateway Basic auth username (required for gateway mode)
+    openai_auth_password: Optional[str] = None  # Gateway Basic auth password (required for gateway mode)
+    openai_model: str = "Qwen2.5-7B-Instruct"  # Default: Free Qwen model with full tooling/function calling support
+    openai_embedding_model: str = "text-embedding-3-small"  # Embedding model from gateway
+    
+    # OpenAI Platform mode (fallback only - paid, when Basic auth not provided)
     openai_api_key: Optional[str] = None  # Optional: Only needed for OpenAI Platform direct access (paid)
-    openai_model: str = "Qwen2.5-7B-Instruct"  # Free Qwen model with tooling support on gateway
-    openai_embedding_model: str = "text-embedding-3-small"
-    openai_base_url: Optional[str] = None  # Custom base URL for company APIs
-    openai_auth_username: Optional[str] = None  # Basic auth username
-    openai_auth_password: Optional[str] = None  # Basic auth password
     
     # Company API per-request headers (optional)
     # Format: "Header-Name:value" separated by commas
