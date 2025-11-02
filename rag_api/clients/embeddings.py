@@ -46,7 +46,7 @@ def get_embeddings() -> Embeddings:
         return OpenAIEmbeddings(
             model=settings.openai_embedding_model,
             openai_api_key=settings.openai_api_key or "xxxx",
-            openai_base_url=settings.openai_base_url,
+            base_url=settings.openai_base_url,
         )
 
     elif settings.embedding_provider == "huggingface":
