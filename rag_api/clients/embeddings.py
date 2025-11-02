@@ -31,28 +31,24 @@ def get_embeddings() -> Embeddings:
                 "langchain-openai is not installed. Install it with: uv add langchain-openai"
             )
         
-        # OpenAIEmbeddings creates its own async client internally
-        # We need to pass api_key and base_url explicitly so async client has them
-        # For Gateway mode, use placeholder "xxxx" for api_key (Basic auth header is used)
-        from rag_api.clients.openai import get_openai_client
-        openai_client = get_openai_client()
-        
-        # Extract base_url and determine api_key
-        # For Gateway mode, api_key is "xxxx" (placeholder) - Basic auth header handles auth
-        # For Platform mode, api_key comes from settings
+        # OpenAIEmbeddings needs api_key, base_url, and default_headers
+        # Don't pass client - let OpenAIEmbeddings create its own clients
+        # For Gateway mode, use placeholder "xxxx" for api_key (Basic auth header handles auth)
         api_key = settings.openai_api_key or "xxxx"
-        base_url = str(openai_client.base_url) if openai_client.base_url else settings.openai_base_url
+        base_url = settings.openai_base_url
         
-        # Get default_headers from client if available (for Basic auth)
+        # Build Basic auth header for default_headers (if Gateway mode)
         default_headers = None
-        if hasattr(openai_client, '_client'):
-            default_headers = getattr(openai_client._client, 'default_headers', None)
+        if settings.openai_auth_username and settings.openai_auth_password:
+            token_string = f"{settings.openai_auth_username}:{settings.openai_auth_password}"
+            token_bytes = b64encode(token_string.encode())
+            default_headers = {"Authorization": f"Basic {token_bytes.decode()}"}
         
         return OpenAIEmbeddings(
             model=settings.openai_embedding_model,
-            client=openai_client,  # Sync client for sync operations
-            openai_api_key=api_key,  # Required for async client creation (SDK validation)
-            openai_api_base=base_url,  # Required for async client to use correct endpoint
+            openai_api_key=api_key,  # Placeholder "xxxx" for Gateway (Basic auth used)
+            openai_api_base=base_url,  # Gateway endpoint
+            default_headers=default_headers,  # Basic auth header
         )
 
     elif settings.embedding_provider == "huggingface":
