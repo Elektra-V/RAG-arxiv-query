@@ -84,9 +84,9 @@ def get_openai_client() -> OpenAI:
         "default_headers": headers,
     }
     
-    # Only include api_key if provided AND no Basic auth (for OpenAI Platform direct access)
+    # Only include api_key if provided AND Basic auth not available (for OpenAI Platform direct access)
     # For gateway with Basic auth, api_key is not needed and causes conflicts
-    if api_key and not (username and password):
+    if api_key and (not username or not password):
         client_kwargs["api_key"] = api_key
         logger.info(f"Using API key authentication for {base_url}")
     else:

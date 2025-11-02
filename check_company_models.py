@@ -44,8 +44,8 @@ def get_company_client() -> OpenAI:
         "default_headers": {"Authorization": f"Basic {token_bytes.decode()}"},
     }
     
-    # Only include api_key if provided AND no Basic auth (for OpenAI Platform)
-    if api_key and not (username and password):
+    # Only include api_key if provided AND Basic auth not available (for OpenAI Platform)
+    if api_key and (not username or not password):
         client_kwargs["api_key"] = api_key
     
     client = OpenAI(**client_kwargs)
