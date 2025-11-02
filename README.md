@@ -208,7 +208,7 @@ rag-api/
 
 ## 💡 Tips
 
-- **Use `--tunnel` flag**: Always run `uv run langgraph dev --tunnel` for Safari compatibility
+- **Cluster access**: If tunnel fails, use `uv run langgraph dev` (without `--tunnel`) and SSH port forwarding (see `CLUSTER_ACCESS.md`)
 - **Ingest before querying**: Your database starts empty - ingest documents first!
 - **Use OpenAI embeddings**: Recommended - Set `EMBEDDING_PROVIDER="openai"` for fast embeddings
 - **Alternative**: Use `EMBEDDING_PROVIDER="huggingface"` for free local embeddings (CPU only, slower)
