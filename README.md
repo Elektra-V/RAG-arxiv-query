@@ -174,6 +174,13 @@ curl http://localhost:6334/collections
 - Run: `uv sync` first
 - Then: `uv run langgraph dev --tunnel`
 
+### CUDA compatibility error (GTX 1080 Ti or older GPUs)
+- **Error**: `CUDA error: no kernel image is available for execution on the device`
+- **Cause**: Older GPUs (CUDA < 7.0) incompatible with modern PyTorch
+- **Solution**: The code automatically forces CPU usage for embeddings
+- **Note**: CPU embeddings are slower but work reliably
+- If you still see errors, ensure `EMBEDDING_PROVIDER="huggingface"` in `.env`
+
 ### Safari blocks localhost
 - Always use `--tunnel` flag: `uv run langgraph dev --tunnel`
 - This creates a secure Cloudflare tunnel (HTTPS URL)
