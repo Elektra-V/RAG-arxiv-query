@@ -31,109 +31,48 @@ def get_embeddings() -> Embeddings:
                 "langchain-openai is not installed. Install it with: uv add langchain-openai"
             )
         
-        # OpenAIEmbeddings needs api_key, base_url, and default_headers
-        # Gateway doesn't support encoding_format='base64' parameter
-        # We need to wrap the embedding creation to remove this parameter
+        # Gateway requirements:
+        # 1. Needs Basic auth in default_headers
+        # 2. Doesn't support encoding_format='base64' (must be removed)
+        # 3. Input must be text strings, not token IDs (disable tokenization)
+        
         api_key = settings.openai_api_key or "xxxx"
         base_url = settings.openai_base_url
         
-        # Build Basic auth header for default_headers (if Gateway mode)
+        # Build Basic auth header
         default_headers = None
         if settings.openai_auth_username and settings.openai_auth_password:
             token_string = f"{settings.openai_auth_username}:{settings.openai_auth_password}"
             token_bytes = b64encode(token_string.encode())
             default_headers = {"Authorization": f"Basic {token_bytes.decode()}"}
         
-        # Create embeddings instance
+        # Create embeddings with gateway-compatible settings
         embeddings = OpenAIEmbeddings(
             model=settings.openai_embedding_model,
-            openai_api_key=api_key,  # Placeholder "xxxx" for Gateway (Basic auth used)
-            openai_api_base=base_url,  # Gateway endpoint
-            default_headers=default_headers,  # Basic auth header
+            openai_api_key=api_key,
+            openai_api_base=base_url,
+            default_headers=default_headers,
+            tiktoken_enabled=False,  # Gateway needs text, not token IDs
         )
         
-        # Gateway requirements:
-        # 1. Doesn't support encoding_format='base64' parameter  
-        # 2. Input must be a list of text strings (not token IDs)
-        # 3. LangChain's _tokenize converts text to token IDs [[1985]], but gateway needs raw text
-        # Solution: Override _tokenize to return text directly, and patch create to remove encoding_format
+        # Patch create method to remove encoding_format (gateway doesn't support it)
+        original_create = embeddings.client.embeddings.create
         
-        # Disable tokenization - gateway needs raw text, not token IDs
-        embeddings.tiktoken_enabled = False
+        def create_fixed(**kwargs):
+            kwargs.pop('encoding_format', None)  # Remove unsupported parameter
+            return original_create(**kwargs)
         
-        # Override _tokenize to return text directly (not token IDs)
-        # LangChain's default _tokenize converts text to token IDs, but gateway needs text
-        original_tokenize = embeddings._tokenize
+        embeddings.client.embeddings.create = create_fixed
         
-        def tokenize_text_only(texts: list[str], chunk_size: int):
-            """Tokenize that returns text directly (not token IDs) for gateway compatibility."""
-            # Return texts as-is with indices - gateway handles tokenization
-            indices = list(range(len(texts)))
-            return texts, [], indices  # texts, tokens (empty), indices
-        
-        embeddings._tokenize = tokenize_text_only
-        
-        # Patch embeddings.create to remove encoding_format and ensure input format
-        if hasattr(embeddings, 'client') and hasattr(embeddings.client, 'embeddings'):
-            original_create = embeddings.client.embeddings.create
+        # Patch async client too
+        if hasattr(embeddings, 'async_client'):
+            original_async_create = embeddings.async_client.embeddings.create
             
-            def create_gateway_compatible(**kwargs):
-                # Remove encoding_format (gateway doesn't support it)
+            def create_async_fixed(**kwargs):
                 kwargs.pop('encoding_format', None)
-                
-                # Ensure input is a list of strings (gateway requirement)
-                if 'input' in kwargs:
-                    input_val = kwargs['input']
-                    if isinstance(input_val, str):
-                        kwargs['input'] = [input_val]
-                    elif isinstance(input_val, list):
-                        # Convert any token IDs or nested lists to strings
-                        fixed_input = []
-                        for item in input_val:
-                            if isinstance(item, str):
-                                fixed_input.append(item)
-                            elif isinstance(item, list):
-                                # Nested list of token IDs - join as string (fallback)
-                                fixed_input.append(' '.join(str(i) for i in item))
-                            elif isinstance(item, (int, float)):
-                                fixed_input.append(str(item))
-                            else:
-                                fixed_input.append(str(item))
-                        kwargs['input'] = fixed_input
-                    else:
-                        kwargs['input'] = [str(input_val)]
-                
-                return original_create(**kwargs)
+                return original_async_create(**kwargs)
             
-            embeddings.client.embeddings.create = create_gateway_compatible
-            
-            # Patch async client too
-            if hasattr(embeddings, 'async_client') and hasattr(embeddings.async_client, 'embeddings'):
-                original_async_create = embeddings.async_client.embeddings.create
-                
-                def create_async_gateway_compatible(**kwargs):
-                    kwargs.pop('encoding_format', None)
-                    if 'input' in kwargs:
-                        input_val = kwargs['input']
-                        if isinstance(input_val, str):
-                            kwargs['input'] = [input_val]
-                        elif isinstance(input_val, list):
-                            fixed_input = []
-                            for item in input_val:
-                                if isinstance(item, str):
-                                    fixed_input.append(item)
-                                elif isinstance(item, list):
-                                    fixed_input.append(' '.join(str(i) for i in item))
-                                elif isinstance(item, (int, float)):
-                                    fixed_input.append(str(item))
-                                else:
-                                    fixed_input.append(str(item))
-                            kwargs['input'] = fixed_input
-                        else:
-                            kwargs['input'] = [str(input_val)]
-                    return original_async_create(**kwargs)
-                
-                embeddings.async_client.embeddings.create = create_async_gateway_compatible
+            embeddings.async_client.embeddings.create = create_async_fixed
         
         return embeddings
 
