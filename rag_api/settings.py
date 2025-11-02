@@ -33,13 +33,11 @@ class Settings(BaseSettings):
     openai_auth_username: Optional[str] = None  # Basic auth username
     openai_auth_password: Optional[str] = None  # Basic auth password
     
-    # OpenRouter optional headers (for rankings)
-    openrouter_http_referer: Optional[str] = None  # Optional: Your site URL
-    openrouter_x_title: Optional[str] = None  # Optional: Your site name
-    
-    # Company API custom headers (for any gateway requiring additional headers)
-    # Format: "Header-Name:value" separated by commas, e.g., "X-Custom-Header:value1,Another-Header:value2"
-    company_api_extra_headers: Optional[str] = None  # Optional: Custom headers for company APIs
+    # Company API per-request headers (optional)
+    # Format: "Header-Name:value" separated by commas
+    # These are passed as extra_headers in API calls if needed
+    # Example: "X-Request-ID:default-id" (matches company API pattern)
+    company_api_extra_headers: Optional[str] = None
 
     # Anthropic configuration
     anthropic_api_key: Optional[str] = None

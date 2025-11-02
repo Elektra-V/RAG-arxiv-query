@@ -17,7 +17,14 @@ except ImportError:
 
 
 def get_company_client() -> OpenAI:
-    """Create OpenAI client configured for company API."""
+    """Create OpenAI client configured for company API.
+    
+    Matches the exact pattern from company API documentation:
+    - Uses Basic auth with username:password
+    - Base64 encodes credentials
+    - Sets Authorization header
+    - Uses "xxxx" as API key placeholder
+    """
     username = os.getenv("OPENAI_AUTH_USERNAME")
     password = os.getenv("OPENAI_AUTH_PASSWORD")
     base_url = os.getenv("OPENAI_BASE_URL", "https://genai.iais.fraunhofer.de/api/v2")
