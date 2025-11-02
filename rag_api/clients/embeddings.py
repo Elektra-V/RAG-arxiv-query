@@ -31,14 +31,28 @@ def get_embeddings() -> Embeddings:
                 "langchain-openai is not installed. Install it with: uv add langchain-openai"
             )
         
-        # Use the centralized OpenAI client factory
-        # This handles Basic auth and custom headers automatically
+        # OpenAIEmbeddings creates its own async client internally
+        # We need to pass api_key and base_url explicitly so async client has them
+        # For Gateway mode, use placeholder "xxxx" for api_key (Basic auth header is used)
         from rag_api.clients.openai import get_openai_client
         openai_client = get_openai_client()
         
+        # Extract base_url and determine api_key
+        # For Gateway mode, api_key is "xxxx" (placeholder) - Basic auth header handles auth
+        # For Platform mode, api_key comes from settings
+        api_key = settings.openai_api_key or "xxxx"
+        base_url = str(openai_client.base_url) if openai_client.base_url else settings.openai_base_url
+        
+        # Get default_headers from client if available (for Basic auth)
+        default_headers = None
+        if hasattr(openai_client, '_client'):
+            default_headers = getattr(openai_client._client, 'default_headers', None)
+        
         return OpenAIEmbeddings(
             model=settings.openai_embedding_model,
-            client=openai_client,
+            client=openai_client,  # Sync client for sync operations
+            openai_api_key=api_key,  # Required for async client creation (SDK validation)
+            openai_api_base=base_url,  # Required for async client to use correct endpoint
         )
 
     elif settings.embedding_provider == "huggingface":
