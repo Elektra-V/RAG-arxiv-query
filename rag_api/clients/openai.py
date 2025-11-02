@@ -44,11 +44,15 @@ def get_openai_client() -> OpenAI:
     password = settings.openai_auth_password
     api_key = settings.openai_api_key
     
-    # Validate required credentials
-    if not username or not password:
+    # Detect authentication mode
+    has_basic_auth = username and password
+    has_api_key = bool(api_key)
+    
+    # Validate: Need at least one authentication method
+    if not has_basic_auth and not has_api_key:
         raise ValueError(
-            "OPENAI_AUTH_USERNAME and OPENAI_AUTH_PASSWORD must be set "
-            "for company API gateway. Check your .env file."
+            "Either OPENAI_AUTH_USERNAME/OPENAI_AUTH_PASSWORD (for gateway) "
+            "OR OPENAI_API_KEY (for OpenAI Platform) must be set. Check your .env file."
         )
     
     if not base_url:
@@ -56,13 +60,24 @@ def get_openai_client() -> OpenAI:
             "OPENAI_BASE_URL must be set. Check your .env file."
         )
     
-    # Build Basic auth token (exact pattern from company API docs)
-    token_string = f"{username}:{password}"
-    token_bytes = b64encode(token_string.encode())
-    auth_header = f"Basic {token_bytes.decode()}"
+    # Build client kwargs
+    client_kwargs = {"base_url": base_url}
+    headers = {}
     
-    # Build headers dictionary
-    headers = {"Authorization": auth_header}
+    # Gateway mode: Basic auth (preferred for free models)
+    if has_basic_auth:
+        token_string = f"{username}:{password}"
+        token_bytes = b64encode(token_string.encode())
+        headers["Authorization"] = f"Basic {token_bytes.decode()}"
+        logger.info(
+            f"Using Basic auth for gateway {base_url} "
+            f"(username: {username[:3]}..., free models)"
+        )
+    
+    # Platform mode: API key (for paid OpenAI Platform access)
+    elif has_api_key:
+        client_kwargs["api_key"] = api_key
+        logger.info(f"Using API key authentication for OpenAI Platform {base_url}")
     
     # Add custom headers if configured
     if settings.company_api_extra_headers:
@@ -76,24 +91,9 @@ def get_openai_client() -> OpenAI:
         except Exception as e:
             logger.warning(f"Failed to parse custom headers: {e}")
     
-    # When using Basic auth, don't pass api_key to avoid Bearer token conflict
-    # SDK automatically adds Authorization: Bearer <api_key> if api_key is provided
-    # This conflicts with our Basic auth header, causing 401 errors
-    client_kwargs = {
-        "base_url": base_url,
-        "default_headers": headers,
-    }
-    
-    # Only include api_key if provided AND Basic auth not available (for OpenAI Platform direct access)
-    # For gateway with Basic auth, api_key is not needed and causes conflicts
-    if api_key and (not username or not password):
-        client_kwargs["api_key"] = api_key
-        logger.info(f"Using API key authentication for {base_url}")
-    else:
-        logger.info(
-            f"Using Basic auth for {base_url} "
-            f"(username: {username[:3]}..., no API key needed for gateway)"
-        )
+    # Set default_headers if we have any (Basic auth or custom headers)
+    if headers:
+        client_kwargs["default_headers"] = headers
     
     # Create client
     client = OpenAI(**client_kwargs)

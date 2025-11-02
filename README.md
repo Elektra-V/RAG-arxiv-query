@@ -58,15 +58,29 @@ uv run langgraph dev --tunnel
 
 ### Required Settings
 
+**Choose ONE authentication mode:**
+
+**Gateway Mode (Free models, recommended):**
 | Setting | Description | Example |
 |---------|-------------|---------|
-| `LLM_PROVIDER` | Provider type | `"openai"` |
 | `OPENAI_BASE_URL` | Company API gateway URL | `"https://genai.iais.fraunhofer.de/api/v2"` |
 | `OPENAI_AUTH_USERNAME` | Basic auth username | `"my-username"` |
 | `OPENAI_AUTH_PASSWORD` | Basic auth password | `"my-password"` |
-| `OPENAI_API_KEY` | API key (use `"xxxx"` as placeholder) | `"xxxx"` |
-| `OPENAI_MODEL` | Model name from company API | `"Llama-3-SauerkrautLM"` |
-| `OPENAI_EMBEDDING_MODEL` | Embedding model from company API | `"text-embedding-3-small"` |
+| `OPENAI_API_KEY` | Leave empty (not needed for gateway) | `""` or omit |
+
+**Platform Mode (Paid, OpenAI Platform direct access):**
+| Setting | Description | Example |
+|---------|-------------|---------|
+| `OPENAI_BASE_URL` | OpenAI Platform URL | `"https://api.openai.com/v1"` |
+| `OPENAI_API_KEY` | Your OpenAI Platform API key | `"sk-..."` |
+| `OPENAI_AUTH_USERNAME` | Leave empty | `""` or omit |
+| `OPENAI_AUTH_PASSWORD` | Leave empty | `""` or omit |
+
+**Model Settings:**
+| Setting | Description | Example |
+|---------|-------------|---------|
+| `OPENAI_MODEL` | Model name | Gateway: `"Qwen2.5-7B-Instruct"`, Platform: `"gpt-4o-mini"` |
+| `OPENAI_EMBEDDING_MODEL` | Embedding model | `"text-embedding-3-small"` |
 
 ### Optional Settings
 
