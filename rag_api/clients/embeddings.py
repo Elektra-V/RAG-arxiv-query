@@ -31,22 +31,14 @@ def get_embeddings() -> Embeddings:
                 "langchain-openai is not installed. Install it with: uv add langchain-openai"
             )
         
-        # For OpenAI embeddings, we need to handle Basic auth
-        # LangChain OpenAIEmbeddings supports base_url parameter (not openai_base_url)
-        # For Basic auth, we set it via environment variable before creating the client
-        
-        # Set Basic auth header if credentials provided
-        if settings.openai_auth_username and settings.openai_auth_password:
-            token_string = f"{settings.openai_auth_username}:{settings.openai_auth_password}"
-            token_bytes = b64encode(token_string.encode())
-            auth_header = f"Basic {token_bytes.decode()}"
-            # Set environment variable that httpx (used by OpenAI SDK) will pick up
-            os.environ["OPENAI_EXTRA_HEADERS"] = f'{{"Authorization": "{auth_header}"}}'
+        # Use the centralized OpenAI client factory
+        # This handles Basic auth and custom headers automatically
+        from rag_api.clients.openai import get_openai_client
+        openai_client = get_openai_client()
         
         return OpenAIEmbeddings(
             model=settings.openai_embedding_model,
-            openai_api_key=settings.openai_api_key or "xxxx",
-            base_url=settings.openai_base_url,
+            client=openai_client,
         )
 
     elif settings.embedding_provider == "huggingface":
