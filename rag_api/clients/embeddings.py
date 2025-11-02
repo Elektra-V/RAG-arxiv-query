@@ -32,8 +32,13 @@ def get_embeddings() -> Embeddings:
             )
         
         # OpenAIEmbeddings needs api_key, base_url, and default_headers
-        # Don't pass client - let OpenAIEmbeddings create its own clients
-        # For Gateway mode, use placeholder "xxxx" for api_key (Basic auth header handles auth)
+        # Gateway doesn't support encoding_format='base64' parameter
+        # Use client parameter and override embedding creation to remove encoding_format
+        from rag_api.clients.openai import get_openai_client
+        openai_client = get_openai_client()
+        
+        # Create OpenAIEmbeddings with client to control embedding creation
+        # We'll need to handle encoding_format removal via client monkey-patch or subclass
         api_key = settings.openai_api_key or "xxxx"
         base_url = settings.openai_base_url
         
@@ -44,12 +49,28 @@ def get_embeddings() -> Embeddings:
             token_bytes = b64encode(token_string.encode())
             default_headers = {"Authorization": f"Basic {token_bytes.decode()}"}
         
-        return OpenAIEmbeddings(
+        # Create embeddings instance
+        embeddings = OpenAIEmbeddings(
             model=settings.openai_embedding_model,
             openai_api_key=api_key,  # Placeholder "xxxx" for Gateway (Basic auth used)
             openai_api_base=base_url,  # Gateway endpoint
             default_headers=default_headers,  # Basic auth header
+            client=openai_client,  # Use our configured client
         )
+        
+        # Override the embeddings.client.embeddings.create to remove encoding_format
+        # Gateway doesn't support encoding_format='base64' parameter
+        original_create = embeddings.client.embeddings.create
+        
+        def create_without_encoding_format(*args, **kwargs):
+            # Remove encoding_format if present (gateway doesn't support it)
+            if 'encoding_format' in kwargs:
+                del kwargs['encoding_format']
+            return original_create(*args, **kwargs)
+        
+        embeddings.client.embeddings.create = create_without_encoding_format
+        
+        return embeddings
 
     elif settings.embedding_provider == "huggingface":
         if HuggingFaceEmbeddings is None:
