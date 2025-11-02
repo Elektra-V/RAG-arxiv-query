@@ -29,7 +29,7 @@ OPENAI_BASE_URL="https://genai.iais.fraunhofer.de/api/v2"
 OPENAI_AUTH_USERNAME="your-username"
 OPENAI_AUTH_PASSWORD="your-password"
 OPENAI_MODEL="Qwen2.5-7B-Instruct"  # FREE Qwen with full tooling support!
-OPENAI_EMBEDDING_MODEL="text-embedding-3-small"
+OPENAI_EMBEDDING_MODEL="all-mpnet-base-v2"  # Gateway embedding model (per company API docs)
 # OPENAI_API_KEY=""  # Leave empty - NOT needed for gateway!
 ```
 
@@ -73,7 +73,7 @@ uv run langgraph dev --tunnel
 | `OPENAI_AUTH_USERNAME` | Basic auth username | `"my-username"` |
 | `OPENAI_AUTH_PASSWORD` | Basic auth password | `"my-password"` |
 | `OPENAI_MODEL` | **Qwen model with tooling** | `"Qwen2.5-7B-Instruct"` (default, recommended) |
-| `OPENAI_EMBEDDING_MODEL` | Embedding model | `"text-embedding-3-small"` |
+| `OPENAI_EMBEDDING_MODEL` | Gateway embedding model | `"all-mpnet-base-v2"` (per company API docs) |
 | `OPENAI_API_KEY` | **Leave empty** (not needed!) | Omit or set to `""` |
 
 **Alternative Gateway Models:**

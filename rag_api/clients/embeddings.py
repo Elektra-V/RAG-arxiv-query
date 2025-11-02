@@ -93,16 +93,16 @@ def get_embeddings() -> Embeddings:
                 "langchain-huggingface is not installed. Install it with: uv add langchain-huggingface"
             )
         
-        # Validate model name - ensure it's not an OpenAI model name
+        # Validate model name - ensure it's not a gateway/OpenAI model name
         model_name = settings.huggingface_model
-        openai_model_names = ["text-embedding-3-small", "text-embedding-3-large", "text-embedding-ada-002"]
-        if model_name in openai_model_names:
+        gateway_model_names = ["all-mpnet-base-v2", "text-embedding-3-small", "text-embedding-3-large", "text-embedding-ada-002"]
+        if model_name in gateway_model_names:
             raise ValueError(
-                f"Error: '{model_name}' is an OpenAI embedding model, not a HuggingFace model.\n"
+                f"Error: '{model_name}' is a gateway/OpenAI embedding model, not a HuggingFace model.\n"
                 f"\n"
-                f"For OpenAI embeddings (text-embedding-3-small/large) via Fraunhofer gateway:\n"
+                f"For gateway embeddings (all-mpnet-base-v2) via Fraunhofer gateway:\n"
                 f"  Set EMBEDDING_PROVIDER='openai' (not 'huggingface')\n"
-                f"  Set OPENAI_EMBEDDING_MODEL='text-embedding-3-small' (or text-embedding-3-large)\n"
+                f"  Set OPENAI_EMBEDDING_MODEL='all-mpnet-base-v2' (per company API docs)\n"
                 f"\n"
                 f"For local HuggingFace embeddings:\n"
                 f"  Set EMBEDDING_PROVIDER='huggingface'\n"
