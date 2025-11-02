@@ -55,13 +55,20 @@ def get_embeddings() -> Embeddings:
             tiktoken_enabled=False,  # Gateway needs text, not token IDs
         )
         
-        # Patch create method to remove encoding_format (gateway doesn't support it)
-        # embeddings.client is the Embeddings resource object, not the OpenAI client
+        # Patch create method: Remove encoding_format and ensure input format
+        # Gateway requirements:
+        # - input must be list: ["text"] not "text"
+        # - response.data[0].embedding (singular, not embeddings)
         if hasattr(embeddings.client, 'create'):
             original_create = embeddings.client.create
             
             def create_fixed(**kwargs):
-                kwargs.pop('encoding_format', None)  # Remove unsupported parameter
+                kwargs.pop('encoding_format', None)  # Gateway doesn't support this
+                
+                # Ensure input is always a list (gateway requirement)
+                if 'input' in kwargs and isinstance(kwargs['input'], str):
+                    kwargs['input'] = [kwargs['input']]
+                
                 return original_create(**kwargs)
             
             embeddings.client.create = create_fixed
@@ -72,6 +79,8 @@ def get_embeddings() -> Embeddings:
             
             def create_async_fixed(**kwargs):
                 kwargs.pop('encoding_format', None)
+                if 'input' in kwargs and isinstance(kwargs['input'], str):
+                    kwargs['input'] = [kwargs['input']]
                 return original_async_create(**kwargs)
             
             embeddings.async_client.create = create_async_fixed
