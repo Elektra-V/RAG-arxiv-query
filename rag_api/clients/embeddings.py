@@ -56,23 +56,25 @@ def get_embeddings() -> Embeddings:
         )
         
         # Patch create method to remove encoding_format (gateway doesn't support it)
-        original_create = embeddings.client.embeddings.create
-        
-        def create_fixed(**kwargs):
-            kwargs.pop('encoding_format', None)  # Remove unsupported parameter
-            return original_create(**kwargs)
-        
-        embeddings.client.embeddings.create = create_fixed
+        # embeddings.client is the Embeddings resource object, not the OpenAI client
+        if hasattr(embeddings.client, 'create'):
+            original_create = embeddings.client.create
+            
+            def create_fixed(**kwargs):
+                kwargs.pop('encoding_format', None)  # Remove unsupported parameter
+                return original_create(**kwargs)
+            
+            embeddings.client.create = create_fixed
         
         # Patch async client too
-        if hasattr(embeddings, 'async_client'):
-            original_async_create = embeddings.async_client.embeddings.create
+        if hasattr(embeddings, 'async_client') and hasattr(embeddings.async_client, 'create'):
+            original_async_create = embeddings.async_client.create
             
             def create_async_fixed(**kwargs):
                 kwargs.pop('encoding_format', None)
                 return original_async_create(**kwargs)
             
-            embeddings.async_client.embeddings.create = create_async_fixed
+            embeddings.async_client.create = create_async_fixed
         
         return embeddings
 
