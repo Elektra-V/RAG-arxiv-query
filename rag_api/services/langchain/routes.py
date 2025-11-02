@@ -100,9 +100,7 @@ async def query(request: QueryRequest) -> QueryResponse:
         logger.info(f"✅ Agent response received in {execution_time:.2f}ms")
         
     except httpx.ConnectError as exc:
-        error_msg = f"Unable to reach model service"
-        if settings.llm_provider == "ollama":
-            error_msg += f" at {settings.ollama_base_url}"
+        error_msg = f"Unable to reach model service at {settings.openai_base_url}"
         logger.error(error_msg, exc_info=True)
         raise HTTPException(status_code=502, detail=error_msg) from exc
     except Exception as exc:
