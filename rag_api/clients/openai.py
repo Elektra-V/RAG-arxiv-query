@@ -77,7 +77,10 @@ def get_openai_client() -> OpenAI:
         token_bytes = b64encode(token_string.encode())
         auth_header = f"Basic {token_bytes.decode()}"
         
+        # SDK requires api_key parameter even with Basic auth (for validation)
+        # We use placeholder "xxxx" - Basic auth header takes precedence
         client_kwargs = {
+            "api_key": "xxxx",  # Placeholder - SDK requires this, but Basic auth header is used
             "base_url": base_url,
             "default_headers": {"Authorization": auth_header},
         }
