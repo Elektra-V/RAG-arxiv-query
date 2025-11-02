@@ -1,7 +1,6 @@
 """OpenAI client factory for OpenAI Platform."""
 
 import logging
-from typing import Optional
 
 try:
     from openai import OpenAI
@@ -30,12 +29,25 @@ def get_openai_client() -> OpenAI:
     
     settings = get_settings()
     
-    if not settings.openai_api_key:
+    # Validate API key is present and not empty
+    api_key = settings.openai_api_key
+    if not api_key or not api_key.strip():
         raise ValueError(
-            "OPENAI_API_KEY must be set. Check your .env file."
+            "OPENAI_API_KEY is not set or is empty in .env file. "
+            "Please add your OpenAI API key to the .env file.\n"
+            "Example: OPENAI_API_KEY=sk-..."
         )
     
-    client = OpenAI(api_key=settings.openai_api_key)
+    # Validate API key format
+    api_key_clean = api_key.strip()
+    if not api_key_clean.startswith(("sk-", "sk_proj-", "sess-")):
+        logger.warning(
+            f"⚠️  API key format might be invalid. "
+            f"OpenAI API keys typically start with 'sk-'. "
+            f"Got: '{api_key_clean[:7]}...'"
+        )
+    
+    client = OpenAI(api_key=api_key_clean)
     
     logger.info("✓ OpenAI Platform: Using API key authentication")
     

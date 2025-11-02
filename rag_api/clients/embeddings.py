@@ -66,10 +66,18 @@ def get_embeddings() -> Embeddings:
             user_override=settings.openai_embedding_model
         )
         
+        # Validate API key
+        if not settings.openai_api_key or not settings.openai_api_key.strip():
+            raise ValueError(
+                "OPENAI_API_KEY is not set or is empty in .env file. "
+                "Please add your OpenAI API key to the .env file.\n"
+                "Example: OPENAI_API_KEY=sk-..."
+            )
+        
         # Create embeddings with OpenAI Platform
         embeddings = OpenAIEmbeddings(
             model=embedding_model,
-            openai_api_key=settings.openai_api_key,
+            openai_api_key=settings.openai_api_key.strip(),
         )
         
         return embeddings

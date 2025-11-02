@@ -103,7 +103,33 @@ async def query(request: QueryRequest) -> QueryResponse:
         error_msg = "Unable to reach model service"
         logger.error(error_msg, exc_info=True)
         raise HTTPException(status_code=502, detail=error_msg) from exc
+    except ValueError as exc:
+        # Configuration errors (missing API key, etc.)
+        error_msg = str(exc)
+        logger.error(f"Configuration error: {error_msg}", exc_info=True)
+        raise HTTPException(
+            status_code=400,
+            detail=f"Configuration error: {error_msg}\n\nPlease check your .env file and ensure OPENAI_API_KEY is set correctly."
+        ) from exc
     except Exception as exc:
+        # Check for OpenAI authentication errors
+        error_type = type(exc).__name__
+        error_str = str(exc)
+        
+        # Check for AuthenticationError from OpenAI SDK
+        if "AuthenticationError" in error_type or "401" in error_str or "Unauthorized" in error_str:
+            logger.error(f"OpenAI authentication failed: {exc}", exc_info=True)
+            raise HTTPException(
+                status_code=401,
+                detail=(
+                    "OpenAI API authentication failed. This usually means:\n"
+                    "1. OPENAI_API_KEY is not set in .env file, or\n"
+                    "2. OPENAI_API_KEY is invalid/expired, or\n"
+                    "3. OPENAI_API_KEY has no credits/usage remaining\n\n"
+                    "Please check your .env file and verify your API key at https://platform.openai.com/api-keys"
+                )
+            ) from exc
+        
         logger.error(f"Error processing query: {exc}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Error processing query: {str(exc)}") from exc
 
@@ -180,11 +206,32 @@ async def query_stream(request: QueryRequest) -> StreamingResponse:
             }
             yield f"data: {json.dumps(summary)}\n\n"
             
+        except ValueError as exc:
+            # Configuration errors
+            error_data = {
+                "type": "error",
+                "error": str(exc),
+                "hint": "Please check your .env file and ensure OPENAI_API_KEY is set correctly.",
+            }
+            logger.error(f"Configuration error: {exc}", exc_info=True)
+            yield f"data: {json.dumps(error_data)}\n\n"
         except Exception as exc:
+            # Check for OpenAI authentication errors
+            error_type = type(exc).__name__
+            error_str = str(exc)
+            is_auth_error = "AuthenticationError" in error_type or "401" in error_str or "Unauthorized" in error_str
+            
             error_data = {
                 "type": "error",
                 "error": str(exc),
             }
+            
+            if is_auth_error:
+                error_data["hint"] = (
+                    "OpenAI API authentication failed. Check OPENAI_API_KEY in .env file "
+                    "or verify at https://platform.openai.com/api-keys"
+                )
+            
             logger.error(f"Streaming error: {exc}", exc_info=True)
             yield f"data: {json.dumps(error_data)}\n\n"
 

@@ -26,7 +26,7 @@ class Settings(BaseSettings):
     embedding_provider: Literal["huggingface", "openai"] = "openai"
 
     # OpenAI Platform configuration (required)
-    openai_api_key: str  # Required: OpenAI Platform API key
+    openai_api_key: Optional[str] = None  # Required: OpenAI Platform API key
     openai_model: str = "gpt-4o-mini"  # Default: OpenAI model
     openai_embedding_model: Optional[str] = None  # Auto-detects based on LLM model if not set
 
@@ -56,5 +56,18 @@ class Settings(BaseSettings):
 
 @lru_cache
 def get_settings() -> Settings:
-    """Return cached application settings."""
+    """Return cached application settings.
+    
+    Note: Settings are cached for performance. If you change .env file,
+    restart the application or clear the cache for changes to take effect.
+    """
     return Settings()
+
+
+def clear_settings_cache() -> None:
+    """Clear the settings cache to force reload from .env file.
+    
+    Use this if you've updated .env file and want to reload settings
+    without restarting the application.
+    """
+    get_settings.cache_clear()
