@@ -39,8 +39,9 @@ This connects to your company API and lists available models. Update `OPENAI_MOD
 uv sync
 
 # Start Qdrant (vector database)
-docker compose up -d
-# OR manually: docker run -d -p 6334:6333 qdrant/qdrant
+# If you see port conflicts, first run: docker compose down --remove-orphans
+docker compose up -d qdrant
+# OR manually: docker run -d -p 6334:6333 --name qdrant-local qdrant/qdrant
 
 # Ingest documents (REQUIRED before querying!)
 uv run rag-api-ingest --query "machine learning" --max-docs 5
