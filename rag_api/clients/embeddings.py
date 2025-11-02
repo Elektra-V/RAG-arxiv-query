@@ -92,12 +92,29 @@ def get_embeddings() -> Embeddings:
             raise ImportError(
                 "langchain-huggingface is not installed. Install it with: uv add langchain-huggingface"
             )
+        
+        # Validate model name - ensure it's not an OpenAI model name
+        model_name = settings.huggingface_model
+        openai_model_names = ["text-embedding-3-small", "text-embedding-3-large", "text-embedding-ada-002"]
+        if model_name in openai_model_names:
+            raise ValueError(
+                f"Error: '{model_name}' is an OpenAI embedding model, not a HuggingFace model.\n"
+                f"\n"
+                f"For OpenAI embeddings (text-embedding-3-small/large) via Fraunhofer gateway:\n"
+                f"  Set EMBEDDING_PROVIDER='openai' (not 'huggingface')\n"
+                f"  Set OPENAI_EMBEDDING_MODEL='text-embedding-3-small' (or text-embedding-3-large)\n"
+                f"\n"
+                f"For local HuggingFace embeddings:\n"
+                f"  Set EMBEDDING_PROVIDER='huggingface'\n"
+                f"  Set HUGGINGFACE_MODEL='sentence-transformers/all-MiniLM-L6-v2'"
+            )
+        
         # Force CPU usage to avoid CUDA compatibility issues
         # Set environment variable to prevent CUDA initialization
         os.environ["CUDA_VISIBLE_DEVICES"] = ""
         # Set device explicitly to CPU via model_kwargs
         return HuggingFaceEmbeddings(
-            model_name=settings.huggingface_model,
+            model_name=model_name,
             model_kwargs={"device": "cpu"}
         )
 
