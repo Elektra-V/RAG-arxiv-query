@@ -13,33 +13,22 @@ class Settings(BaseSettings):
         env_file=".env", env_file_encoding="utf-8", extra="ignore"
     )
 
+    # ArXiv query settings
     arxiv_query: str = "quantum computing"
     arxiv_max_docs: int = 5
 
-    # Qdrant URL - defaults to localhost for portability
-    # Docker Compose will override this via environment variable
+    # Qdrant configuration
     qdrant_url: str = "http://localhost:6334"
     qdrant_collection: str = "arxiv_papers"
 
-    # Model provider - company API gateway (OpenAI-compatible)
+    # Model providers
     llm_provider: Literal["openai"] = "openai"
-    embedding_provider: Literal["huggingface", "openai"] = "openai"  # Default: Uses gateway (fast, no CUDA issues)
+    embedding_provider: Literal["huggingface", "openai"] = "openai"
 
-    # OpenAI configuration - Gateway mode (primary, recommended)
-    # Gateway mode uses Basic auth for free models like Qwen with tooling support
-    openai_base_url: Optional[str] = None  # Gateway URL: https://genai.iais.fraunhofer.de/api/v2
-    openai_auth_username: Optional[str] = None  # Gateway Basic auth username (required for gateway mode)
-    openai_auth_password: Optional[str] = None  # Gateway Basic auth password (required for gateway mode)
-    openai_model: str = "Qwen2.5-7B-Instruct"  # Default: Free Qwen model with full tooling/function calling support
-    openai_embedding_model: Optional[str] = None  # Auto-detected based on LLM model (Qwen models use Qwen-compatible embeddings)
-    
-    # OpenAI Platform mode (fallback only - paid, when Basic auth not provided)
-    openai_api_key: Optional[str] = None  # Optional: Only needed for OpenAI Platform direct access (paid)
-    
-    # Company API per-request headers (optional)
-    # Format: "Header-Name:value" separated by commas
-    # Example: "X-Request-ID:default-id"
-    company_api_extra_headers: Optional[str] = None
+    # OpenAI Platform configuration (required)
+    openai_api_key: str  # Required: OpenAI Platform API key
+    openai_model: str = "gpt-4o-mini"  # Default: OpenAI model
+    openai_embedding_model: Optional[str] = None  # Auto-detects based on LLM model if not set
 
     # HuggingFace configuration (optional fallback for local embeddings)
     huggingface_model: str = "sentence-transformers/all-MiniLM-L6-v2"
@@ -47,24 +36,25 @@ class Settings(BaseSettings):
     # LangChain/LangSmith configuration
     langchain_api_key: Optional[str] = None
     langsmith_api_key: Optional[str] = None
-    langsmith_tracing: bool = True  # Enable by default for better debugging
+    langsmith_tracing: bool = True
     langsmith_project: Optional[str] = None
     langsmith_endpoint: Optional[str] = None
 
+    # Search configuration
     duckduckgo_results: int = 3
 
+    # Service ports
     langchain_host: str = "0.0.0.0"
-    langchain_port: int = 9010  # Changed from 8009 to avoid conflicts
+    langchain_port: int = 9010
 
     llamaindex_host: str = "0.0.0.0"
-    llamaindex_port: int = 9020  # Changed from 8080 to avoid conflicts
+    llamaindex_port: int = 9020
 
     ingestion_host: str = "0.0.0.0"
-    ingestion_port: int = 9030  # Changed from 8090 to avoid conflicts
+    ingestion_port: int = 9030
 
 
 @lru_cache
 def get_settings() -> Settings:
     """Return cached application settings."""
-
     return Settings()

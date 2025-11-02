@@ -43,11 +43,13 @@ def get_llamaindex_embedding() -> BaseEmbedding:
             )
         
         # Use the centralized OpenAI client factory
-        # This handles Basic auth encoding and client creation
         openai_client = get_openai_client()
         
+        # Auto-detect embedding model if not set
+        embedding_model = settings.openai_embedding_model or "text-embedding-3-small"
+        
         return OpenAIEmbedding(
-            model=settings.openai_embedding_model,
+            model=embedding_model,
             client=openai_client,
         )
 
@@ -73,7 +75,7 @@ def get_llamaindex_embedding() -> BaseEmbedding:
 
 
 def get_llamaindex_llm() -> LLM:
-    """Get the configured LLM model for company API gateway."""
+    """Get the configured LLM model for OpenAI Platform."""
     settings = get_settings()
 
     if OpenAI is None:

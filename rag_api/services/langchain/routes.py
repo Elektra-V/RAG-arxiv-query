@@ -100,7 +100,7 @@ async def query(request: QueryRequest) -> QueryResponse:
         logger.info(f"✅ Agent response received in {execution_time:.2f}ms")
         
     except httpx.ConnectError as exc:
-        error_msg = f"Unable to reach model service at {settings.openai_base_url}"
+        error_msg = "Unable to reach model service"
         logger.error(error_msg, exc_info=True)
         raise HTTPException(status_code=502, detail=error_msg) from exc
     except Exception as exc:
@@ -250,8 +250,7 @@ async def debug() -> dict[str, Any]:
         debug_info["llm"] = {
             "provider": settings.llm_provider,
             "model": settings.openai_model,
-            "base_url": settings.openai_base_url or "default",
-            "auth_configured": bool(settings.openai_auth_username and settings.openai_auth_password),
+            "api_key_configured": bool(settings.openai_api_key),
         }
     except Exception as exc:
         logger.exception("Failed to configure LLM client")

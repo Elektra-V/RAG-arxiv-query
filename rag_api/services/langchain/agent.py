@@ -56,7 +56,7 @@ def configure_langsmith() -> None:
 
 
 def get_llm_model() -> BaseChatModel:
-    """Get the configured LLM model for company API gateway."""
+    """Get the configured LLM model for OpenAI Platform."""
     settings = get_settings()
 
     if ChatOpenAI is None:
