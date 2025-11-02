@@ -52,34 +52,70 @@ def get_embeddings() -> Embeddings:
             default_headers=default_headers,  # Basic auth header
         )
         
-        # Gateway doesn't support encoding_format='base64' parameter
-        # Patch the embeddings client to remove it from all requests
+        # Gateway requirements:
+        # 1. Doesn't support encoding_format='base64' parameter
+        # 2. Input must be a list (even for single text)
+        # Patch the embeddings client to handle both
         if hasattr(embeddings, 'client') and hasattr(embeddings.client, 'embeddings'):
             original_create = embeddings.client.embeddings.create
             
-            def create_without_encoding_format(*args, **kwargs):
-                # Remove encoding_format parameter (gateway doesn't support it)
-                if 'encoding_format' in kwargs:
-                    del kwargs['encoding_format']
-                # Also check in extra_body if present
+            def create_gateway_compatible(**kwargs):
+                # Remove encoding_format (gateway doesn't support it)
+                kwargs.pop('encoding_format', None)
+                
+                # Ensure input is a list of strings
+                if 'input' in kwargs:
+                    input_value = kwargs['input']
+                    # If it's a string, convert to list
+                    if isinstance(input_value, str):
+                        kwargs['input'] = [input_value]
+                    # If it's already a list, ensure all items are strings
+                    elif isinstance(input_value, list):
+                        # Flatten nested lists and ensure strings
+                        flattened = []
+                        for item in input_value:
+                            if isinstance(item, str):
+                                flattened.append(item)
+                            elif isinstance(item, list):
+                                # Handle nested lists (e.g., [[1985]])
+                                flattened.extend([str(i) for i in item if not isinstance(i, list)])
+                            else:
+                                flattened.append(str(item))
+                        kwargs['input'] = flattened
+                
+                # Remove from extra_body if present
                 if 'extra_body' in kwargs and isinstance(kwargs['extra_body'], dict):
                     kwargs['extra_body'].pop('encoding_format', None)
-                return original_create(*args, **kwargs)
+                
+                return original_create(**kwargs)
             
-            embeddings.client.embeddings.create = create_without_encoding_format
+            embeddings.client.embeddings.create = create_gateway_compatible
             
             # Also patch async client if it exists
             if hasattr(embeddings, 'async_client') and hasattr(embeddings.async_client, 'embeddings'):
                 original_async_create = embeddings.async_client.embeddings.create
                 
-                def create_async_without_encoding_format(*args, **kwargs):
-                    if 'encoding_format' in kwargs:
-                        del kwargs['encoding_format']
+                def create_async_gateway_compatible(**kwargs):
+                    kwargs.pop('encoding_format', None)
+                    if 'input' in kwargs:
+                        input_value = kwargs['input']
+                        if isinstance(input_value, str):
+                            kwargs['input'] = [input_value]
+                        elif isinstance(input_value, list):
+                            flattened = []
+                            for item in input_value:
+                                if isinstance(item, str):
+                                    flattened.append(item)
+                                elif isinstance(item, list):
+                                    flattened.extend([str(i) for i in item if not isinstance(i, list)])
+                                else:
+                                    flattened.append(str(item))
+                            kwargs['input'] = flattened
                     if 'extra_body' in kwargs and isinstance(kwargs['extra_body'], dict):
                         kwargs['extra_body'].pop('encoding_format', None)
-                    return original_async_create(*args, **kwargs)
+                    return original_async_create(**kwargs)
                 
-                embeddings.async_client.embeddings.create = create_async_without_encoding_format
+                embeddings.async_client.embeddings.create = create_async_gateway_compatible
         
         return embeddings
 
