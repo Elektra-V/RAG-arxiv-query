@@ -17,13 +17,13 @@ Edit `.env` with your credentials:
 
 ```env
 LLM_PROVIDER="openai"
-EMBEDDING_PROVIDER="openai"
+EMBEDDING_PROVIDER="openai"  # Recommended: Uses company API (fast, no CUDA issues)
 OPENAI_BASE_URL="https://genai.iais.fraunhofer.de/api/v2"
 OPENAI_AUTH_USERNAME="your-username"
 OPENAI_AUTH_PASSWORD="your-password"
 OPENAI_API_KEY="xxxx"
 OPENAI_MODEL="Llama-3-SauerkrautLM"
-OPENAI_EMBEDDING_MODEL="text-embedding-3-small"
+OPENAI_EMBEDDING_MODEL="text-embedding-3-small"  # Embedding model from company API
 ```
 
 ### 3. Check Available Models
@@ -65,11 +65,14 @@ uv run langgraph dev --tunnel
 | `OPENAI_AUTH_PASSWORD` | Basic auth password | `"my-password"` |
 | `OPENAI_API_KEY` | API key (use `"xxxx"` as placeholder) | `"xxxx"` |
 | `OPENAI_MODEL` | Model name from company API | `"Llama-3-SauerkrautLM"` |
+| `OPENAI_EMBEDDING_MODEL` | Embedding model from company API | `"text-embedding-3-small"` |
 
 ### Optional Settings
 
-- `EMBEDDING_PROVIDER`: `"openai"` or `"huggingface"` (free local embeddings)
+- `EMBEDDING_PROVIDER`: `"openai"` (recommended - uses company API) or `"huggingface"` (free local, CPU only, slower)
 - `COMPANY_API_EXTRA_HEADERS`: Per-request headers (format: `"Header-Name:value"`)
+
+**💡 Tip**: Use `EMBEDDING_PROVIDER="openai"` to avoid CUDA compatibility issues and get faster embeddings via your company API!
 
 ---
 
@@ -177,9 +180,13 @@ curl http://localhost:6334/collections
 ### CUDA compatibility error (GTX 1080 Ti or older GPUs)
 - **Error**: `CUDA error: no kernel image is available for execution on the device`
 - **Cause**: Older GPUs (CUDA < 7.0) incompatible with modern PyTorch
-- **Solution**: The code automatically forces CPU usage for embeddings
-- **Note**: CPU embeddings are slower but work reliably
-- If you still see errors, ensure `EMBEDDING_PROVIDER="huggingface"` in `.env`
+- **Best Solution**: Use OpenAI embeddings via company API:
+  ```env
+  EMBEDDING_PROVIDER="openai"
+  OPENAI_EMBEDDING_MODEL="text-embedding-3-small"
+  ```
+  This avoids CUDA entirely and is faster!
+- **Alternative**: HuggingFace embeddings on CPU (automatically forced, slower but works)
 
 ### Safari blocks localhost
 - Always use `--tunnel` flag: `uv run langgraph dev --tunnel`
@@ -226,7 +233,8 @@ rag-api/
 - **Use `--tunnel` flag**: Always run `uv run langgraph dev --tunnel` for Safari compatibility
 - **Check models first**: Always run `check_company_models.py` before setting `OPENAI_MODEL`
 - **Ingest before querying**: Your database starts empty - ingest documents first!
-- **Use HuggingFace embeddings**: Set `EMBEDDING_PROVIDER="huggingface"` for free local embeddings (no API calls)
+- **Use OpenAI embeddings**: Recommended - Set `EMBEDDING_PROVIDER="openai"` for fast embeddings via company API (no CUDA issues!)
+- **Alternative**: Use `EMBEDDING_PROVIDER="huggingface"` for free local embeddings (CPU only, slower)
 
 ---
 
