@@ -39,11 +39,10 @@ def get_openai_client() -> OpenAI:
     
     settings = get_settings()
     
-    # Get credentials from settings
-    api_key = settings.openai_api_key or "xxxx"
     base_url = settings.openai_base_url
     username = settings.openai_auth_username
     password = settings.openai_auth_password
+    api_key = settings.openai_api_key
     
     # Validate required credentials
     if not username or not password:
@@ -77,17 +76,26 @@ def get_openai_client() -> OpenAI:
         except Exception as e:
             logger.warning(f"Failed to parse custom headers: {e}")
     
-    # Log authentication setup (masked credentials)
-    logger.info(
-        f"Creating OpenAI client for {base_url} "
-        f"(username: {username[:3]}..., auth: Basic)"
-    )
+    # When using Basic auth, don't pass api_key to avoid Bearer token conflict
+    # SDK automatically adds Authorization: Bearer <api_key> if api_key is provided
+    # This conflicts with our Basic auth header, causing 401 errors
+    client_kwargs = {
+        "base_url": base_url,
+        "default_headers": headers,
+    }
     
-    # Create client - matches company API reference exactly
-    client = OpenAI(
-        api_key=api_key,
-        base_url=base_url,
-        default_headers=headers,
-    )
+    # Only include api_key if provided AND no Basic auth (for OpenAI Platform direct access)
+    # For gateway with Basic auth, api_key is not needed and causes conflicts
+    if api_key and not (username and password):
+        client_kwargs["api_key"] = api_key
+        logger.info(f"Using API key authentication for {base_url}")
+    else:
+        logger.info(
+            f"Using Basic auth for {base_url} "
+            f"(username: {username[:3]}..., no API key needed for gateway)"
+        )
+    
+    # Create client
+    client = OpenAI(**client_kwargs)
     
     return client

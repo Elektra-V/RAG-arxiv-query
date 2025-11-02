@@ -26,8 +26,8 @@ class Settings(BaseSettings):
     embedding_provider: Literal["huggingface", "openai"] = "openai"  # Default to OpenAI for company API
 
     # OpenAI configuration
-    openai_api_key: Optional[str] = None
-    openai_model: str = "gpt-4o-mini"
+    openai_api_key: Optional[str] = None  # Optional: Only needed for OpenAI Platform direct access (paid)
+    openai_model: str = "Qwen2.5-7B-Instruct"  # Free Qwen model with tooling support on gateway
     openai_embedding_model: str = "text-embedding-3-small"
     openai_base_url: Optional[str] = None  # Custom base URL for company APIs
     openai_auth_username: Optional[str] = None  # Basic auth username

@@ -28,7 +28,7 @@ def get_company_client() -> OpenAI:
     username = os.getenv("OPENAI_AUTH_USERNAME")
     password = os.getenv("OPENAI_AUTH_PASSWORD")
     base_url = os.getenv("OPENAI_BASE_URL", "https://genai.iais.fraunhofer.de/api/v2")
-    api_key = os.getenv("OPENAI_API_KEY", "xxxx")
+    api_key = os.getenv("OPENAI_API_KEY")  # Optional: only for OpenAI Platform
     
     if not username or not password:
         print("Error: OPENAI_AUTH_USERNAME and OPENAI_AUTH_PASSWORD must be set")
@@ -38,11 +38,17 @@ def get_company_client() -> OpenAI:
     token_string = f"{username}:{password}"
     token_bytes = b64encode(token_string.encode())
     
-    client = OpenAI(
-        api_key=api_key,
-        default_headers={"Authorization": f"Basic {token_bytes.decode()}"},
-        base_url=base_url
-    )
+    # When using Basic auth, don't pass api_key to avoid Bearer token conflict
+    client_kwargs = {
+        "base_url": base_url,
+        "default_headers": {"Authorization": f"Basic {token_bytes.decode()}"},
+    }
+    
+    # Only include api_key if provided AND no Basic auth (for OpenAI Platform)
+    if api_key and not (username and password):
+        client_kwargs["api_key"] = api_key
+    
+    client = OpenAI(**client_kwargs)
     
     return client
 
