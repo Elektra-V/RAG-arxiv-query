@@ -148,6 +148,7 @@ def get_embeddings() -> Embeddings:
             openai_api_base=base_url,
             default_headers=default_headers,
             tiktoken_enabled=False,  # Gateway needs text, not token IDs
+            check_embedding_ctx_length=False,  # Disable length checking to avoid HuggingFace tokenizer fallback
         )
         
         # Patch create method: Remove encoding_format and ensure input format
