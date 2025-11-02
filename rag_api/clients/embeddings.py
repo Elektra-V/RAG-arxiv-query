@@ -52,33 +52,34 @@ def get_embeddings() -> Embeddings:
             default_headers=default_headers,  # Basic auth header
         )
         
-        # Gateway doesn't support encoding_format parameter
-        # Wrap the embedding creation to remove it from requests
-        original_embed_query = embeddings.embed_query
-        original_embed_documents = embeddings.embed_documents
-        
-        def embed_query_wrapper(text: str) -> list[float]:
-            # Use _embedding_func which bypasses encoding_format
-            return embeddings._embedding_func([text])[0]
-        
-        def embed_documents_wrapper(texts: list[str]) -> list[list[float]]:
-            # Use _embedding_func which bypasses encoding_format
-            return embeddings._embedding_func(texts)
-        
-        # Override methods to remove encoding_format
-        embeddings.embed_query = embed_query_wrapper
-        embeddings.embed_documents = embed_documents_wrapper
-        
-        # Also patch the client's embeddings.create method
+        # Gateway doesn't support encoding_format='base64' parameter
+        # Patch the embeddings client to remove it from all requests
         if hasattr(embeddings, 'client') and hasattr(embeddings.client, 'embeddings'):
             original_create = embeddings.client.embeddings.create
             
-            def create_without_encoding_format(**kwargs):
-                # Remove encoding_format if present
-                kwargs.pop('encoding_format', None)
-                return original_create(**kwargs)
+            def create_without_encoding_format(*args, **kwargs):
+                # Remove encoding_format parameter (gateway doesn't support it)
+                if 'encoding_format' in kwargs:
+                    del kwargs['encoding_format']
+                # Also check in extra_body if present
+                if 'extra_body' in kwargs and isinstance(kwargs['extra_body'], dict):
+                    kwargs['extra_body'].pop('encoding_format', None)
+                return original_create(*args, **kwargs)
             
             embeddings.client.embeddings.create = create_without_encoding_format
+            
+            # Also patch async client if it exists
+            if hasattr(embeddings, 'async_client') and hasattr(embeddings.async_client, 'embeddings'):
+                original_async_create = embeddings.async_client.embeddings.create
+                
+                def create_async_without_encoding_format(*args, **kwargs):
+                    if 'encoding_format' in kwargs:
+                        del kwargs['encoding_format']
+                    if 'extra_body' in kwargs and isinstance(kwargs['extra_body'], dict):
+                        kwargs['extra_body'].pop('encoding_format', None)
+                    return original_async_create(*args, **kwargs)
+                
+                embeddings.async_client.embeddings.create = create_async_without_encoding_format
         
         return embeddings
 
