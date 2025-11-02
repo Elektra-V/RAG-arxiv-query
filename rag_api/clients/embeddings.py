@@ -32,7 +32,7 @@ def get_embeddings() -> Embeddings:
             )
         
         # For OpenAI embeddings, we need to handle Basic auth
-        # LangChain OpenAIEmbeddings supports openai_api_key and openai_base_url
+        # LangChain OpenAIEmbeddings supports base_url parameter (not openai_base_url)
         # For Basic auth, we set it via environment variable before creating the client
         
         # Set Basic auth header if credentials provided
