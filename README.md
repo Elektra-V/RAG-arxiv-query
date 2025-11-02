@@ -43,8 +43,10 @@ docker compose up -d qdrant
 # Ingest documents (REQUIRED before querying!)
 uv run rag-api-ingest --query "machine learning" --max-docs 5
 
-# Start server with tunnel (for Safari compatibility)
-uv run langgraph dev --tunnel
+# Start server
+uv run langgraph dev
+# Access Studio at: http://localhost:8123
+# (For cluster access, see CLUSTER_ACCESS.md)
 ```
 
 **Done!** The Studio UI URL will be displayed - use it to query your RAG system.
@@ -92,11 +94,27 @@ curl http://localhost:6334/collections/arxiv_papers
 
 ### Step 2: Query the System
 
-**Option A: LangGraph Studio (Recommended)**
+**Option A: LangGraph Studio**
+
+**On Linux Cluster or Local Machine:**
 ```bash
-uv run langgraph dev --tunnel
-# Use the Studio UI URL displayed
-# Interactive debugging and query interface
+# Run without tunnel (tunnel may not work on cluster networks)
+uv run langgraph dev
+
+# Access Studio at: http://localhost:8123
+# Access API docs at: http://localhost:9010/docs
+```
+
+**For Remote Cluster Access:**
+Use SSH port forwarding (see `CLUSTER_ACCESS.md` for details):
+```bash
+# On local machine: Forward ports
+ssh -L 8123:localhost:8123 -L 9010:localhost:9010 user@cluster
+
+# On cluster: Start server (without tunnel)
+uv run langgraph dev
+
+# On local browser: http://localhost:8123
 ```
 
 **Option B: Direct API**
@@ -147,11 +165,12 @@ curl http://localhost:6334/collections
 
 ### "langgraph: command not found"
 - Run: `uv sync` first
-- Then: `uv run langgraph dev --tunnel`
+- Then: `uv run langgraph dev`
 
-### Safari blocks localhost
-- Always use `--tunnel` flag: `uv run langgraph dev --tunnel`
-- This creates a secure Cloudflare tunnel (HTTPS URL)
+### Cloudflare tunnel fails on cluster
+- Use `uv run langgraph dev` without `--tunnel` flag
+- For remote access, use SSH port forwarding (see `CLUSTER_ACCESS.md`)
+- Access Studio at `http://localhost:8123` or via port forwarding
 
 ---
 
