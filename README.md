@@ -43,6 +43,9 @@ docker compose up -d qdrant
 # Ingest documents (REQUIRED before querying!)
 uv run rag-api-ingest --query "machine learning" --max-docs 5
 
+# Test your API key (recommended - helps catch issues early)
+uv run python test_openai_key.py
+
 # Start server
 uv run langgraph dev
 # Access Studio at: http://localhost:8123
@@ -50,6 +53,8 @@ uv run langgraph dev
 ```
 
 **Done!** The Studio UI URL will be displayed - use it to query your RAG system.
+
+**⚠️  Getting 401 errors?** Run `uv run python test_openai_key.py` to diagnose API key issues.
 
 ---
 
@@ -145,10 +150,12 @@ curl http://localhost:6334/collections
 
 ## 🔧 Troubleshooting
 
-### "Connection failed" or "Unauthorized"
-- Verify `OPENAI_API_KEY` in `.env` is correct
-- Check if your API key has sufficient credits
-- Verify network connectivity
+### "Connection failed" or "Unauthorized" (401 error)
+- **Test your API key**: Run `uv run python test_openai_key.py` to verify the key is valid
+- Verify `OPENAI_API_KEY` in `.env` is correct (should start with `sk-`)
+- Check if your API key has sufficient credits at https://platform.openai.com/usage
+- Verify the key is active (not revoked) at https://platform.openai.com/api-keys
+- Try creating a new API key if the current one doesn't work
 
 ### "Model not found"
 - Check available models: https://platform.openai.com/docs/models
