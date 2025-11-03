@@ -62,6 +62,16 @@ uv run langgraph dev
 
 ```mermaid
 flowchart TD
+    %% Layout
+    classDef default fill:#ffffff,stroke:#1f2937,color:#111827,stroke-width:1px
+
+    %% Accessible color classes (WCAG-friendly contrast)
+    classDef ingest fill:#fde68a,stroke:#92400e,color:#111827,stroke-width:1.5px  %% warm amber
+    classDef serve  fill:#bfdbfe,stroke:#1e40af,color:#111827,stroke-width:1.5px  %% soft blue
+    classDef store  fill:#bbf7d0,stroke:#166534,color:#111827,stroke-width:1.5px  %% mint green
+    classDef io     fill:#e5e7eb,stroke:#374151,color:#111827,stroke-width:1.5px  %% neutral gray
+
+    %% Ingestion
     subgraph Ingestion
       A[CLI: rag-api-ingest] --> B[Fetch arXiv papers]
       B --> C[Chunk + Clean]
@@ -69,16 +79,26 @@ flowchart TD
       D --> E[Upsert to Qdrant]
     end
 
+    %% Serving
     subgraph Serving
-      F[LangGraph Server] --> G[LangChain ReAct Agent]
+      K[Studio UI / REST API] --> F[LangGraph Server]
+      F --> G[LangChain ReAct Agent]
       G -->|Tool: RAG Query| H[Qdrant (Vector DB)]
       G -->|LLM Calls| I[OpenAI Chat Model (e.g., gpt-4o-mini)]
       G -->|Optional| J[Web Search]
-      K[Studio UI / REST API] --> F
       F --> L[Responses + Debug]
     end
 
+    %% Data flow from ingestion to serving
     E -.-> H
+
+    %% Apply classes
+    class A,B,C,D,E ingest
+    class F,G,I,J,K,L serve
+    class H store
+
+    %% Improve link contrast
+    linkStyle default stroke:#4b5563,stroke-width:1.5px
 ```
 
 Key points:
