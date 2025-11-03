@@ -58,6 +58,36 @@ uv run langgraph dev
 
 ---
 
+## 🧭 High-level Architecture
+
+```mermaid
+flowchart TD
+    subgraph Ingestion
+      A[CLI: rag-api-ingest] --> B[Fetch arXiv papers]
+      B --> C[Chunk + Clean]
+      C --> D[Embeddings (OpenAI: text-embedding-3-small)]
+      D --> E[Upsert to Qdrant]
+    end
+
+    subgraph Serving
+      F[LangGraph Server] --> G[LangChain ReAct Agent]
+      G -->|Tool: RAG Query| H[Qdrant (Vector DB)]
+      G -->|LLM Calls| I[OpenAI Chat Model (e.g., gpt-4o-mini)]
+      G -->|Optional| J[Web Search]
+      K[Studio UI / REST API] --> F
+      F --> L[Responses + Debug]
+    end
+
+    E -.-> H
+```
+
+Key points:
+- One ingestion path populates Qdrant. Serving reads from the same collection.
+- OpenAI is used for both LLM and embeddings by default.
+- Studio UI talks to the LangGraph server which runs the LangChain agent and tools.
+
+---
+
 ## 📋 Configuration Reference
 
 ### Required Settings
