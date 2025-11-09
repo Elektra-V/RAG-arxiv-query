@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import traceback
 from typing import Any, AsyncIterator, Iterable
 
 import httpx
@@ -13,7 +14,9 @@ from pydantic import BaseModel, Field
 from rag_api.services.langchain.agent import agent
 from rag_api.settings import get_settings
 
+# Configure detailed logging
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)  # Ensure debug level is set
 
 router = APIRouter(prefix="", tags=["query"])
 
@@ -42,21 +45,54 @@ class DebugInfo(BaseModel):
 
 
 def _extract_tools_from_messages(messages: Iterable[Any]) -> list[str]:
-    """Extract tool names used from agent messages."""
+    """Extract tool names used from agent messages.
+    
+    Handles multiple message formats:
+    - LangChain message objects with tool_calls attribute
+    - Dict messages with tool_calls key
+    - Tool message types
+    - Content-based detection as fallback
+    """
     tools_used = []
     for message in messages:
+        # Check for tool_calls attribute (LangChain message objects)
         if hasattr(message, "tool_calls") and message.tool_calls:
             for tool_call in message.tool_calls:
                 if hasattr(tool_call, "name"):
                     tools_used.append(tool_call.name)
                 elif isinstance(tool_call, dict):
                     tools_used.append(tool_call.get("name", "unknown"))
-        content = getattr(message, "content", "")
-        if isinstance(content, str) and "tool" in content.lower():
+        
+        # Check for tool_calls in dict format
+        if isinstance(message, dict):
+            if "tool_calls" in message and message["tool_calls"]:
+                for tool_call in message["tool_calls"]:
+                    if isinstance(tool_call, dict):
+                        tool_name = tool_call.get("name") or tool_call.get("function", {}).get("name")
+                        if tool_name:
+                            tools_used.append(tool_name)
+                    elif hasattr(tool_call, "name"):
+                        tools_used.append(tool_call.name)
+            
+            # Check for tool message type
+            if message.get("type") == "tool":
+                tool_name = message.get("name")
+                if tool_name:
+                    tools_used.append(tool_name)
+        
+        # Check message type attribute
+        if hasattr(message, "type") and message.type == "tool":
+            if hasattr(message, "name"):
+                tools_used.append(message.name)
+        
+        # Fallback: content-based detection
+        content = getattr(message, "content", message.get("content", "") if isinstance(message, dict) else "")
+        if isinstance(content, str) and content.strip():
             if "rag_query" in content:
                 tools_used.append("rag_query")
-            if "web_search" in content or "DuckDuckGo" in content:
-                tools_used.append("web_search")
+            if "arxiv_search" in content or "ARXIV" in content or "arxiv.org" in content.lower():
+                tools_used.append("arxiv_search")
+    
     return list(set(tools_used))
 
 
@@ -78,6 +114,18 @@ def _content_from_messages(messages: Iterable[Any]) -> str:
                 return joined
     return ""
 
+def _rag_empty_in_messages(messages: Iterable[Any]) -> bool:
+    """Detect if RAG query returned empty signal in the conversation."""
+    for message in messages:
+        content = getattr(message, "content", None)
+        if content and isinstance(content, str) and "RAG_EMPTY" in content:
+            return True
+        if isinstance(content, list):
+            for part in content:
+                if isinstance(part, dict) and "text" in part and isinstance(part["text"], str):
+                    if "RAG_EMPTY" in part["text"]:
+                        return True
+    return False
 
 @router.post("/query", response_model=QueryResponse)
 async def query(request: QueryRequest) -> QueryResponse:
@@ -112,11 +160,19 @@ async def query(request: QueryRequest) -> QueryResponse:
             detail=f"Configuration error: {error_msg}\n\nPlease check your .env file and ensure OPENAI_API_KEY is set correctly."
         ) from exc
     except Exception as exc:
-        # Check for OpenAI authentication errors
+        # Log full traceback for debugging
         error_type = type(exc).__name__
         error_str = str(exc)
+        full_traceback = traceback.format_exc()
         
-        # Check for AuthenticationError from OpenAI SDK
+        # Log detailed error information
+        logger.error("=" * 80)
+        logger.error(f"ERROR TYPE: {error_type}")
+        logger.error(f"ERROR MESSAGE: {error_str}")
+        logger.error(f"FULL TRACEBACK:\n{full_traceback}")
+        logger.error("=" * 80)
+        
+        # Check for OpenAI authentication errors
         if "AuthenticationError" in error_type or "401" in error_str or "Unauthorized" in error_str:
             logger.error(f"OpenAI authentication failed: {exc}", exc_info=True)
             raise HTTPException(
@@ -128,8 +184,37 @@ async def query(request: QueryRequest) -> QueryResponse:
                     "3. OPENAI_API_KEY has no credits/usage remaining\n\n"
                     "Please check your .env file and verify your API key at https://platform.openai.com/api-keys"
                 )
-            ) from exc
+        ) from exc
         
+        # Check for InternalServerError (502) from OpenRouter - model unavailable
+        if "InternalServerError" in error_type or "502" in error_str:
+            logger.error(f"Model service error (502): {exc}", exc_info=True)
+            settings = get_settings()
+            model_name = settings.openai_model if hasattr(settings, 'openai_model') else "unknown"
+            base_url = settings.openai_base_url if hasattr(settings, 'openai_base_url') else None
+            
+            if base_url and "openrouter" in base_url.lower():
+                detail_msg = (
+                    f"Model '{model_name}' is currently unavailable on OpenRouter.\n\n"
+                    "This usually means:\n"
+                    "1. The model provider has no infrastructure available (temporary outage)\n"
+                    "2. The model is overloaded or rate-limited\n"
+                    "3. The free tier model may have usage limits\n\n"
+                    "Solutions:\n"
+                    "1. Try a different model (e.g., 'openai/gpt-4o-mini', 'anthropic/claude-3-haiku')\n"
+                    "2. Wait a few minutes and try again\n"
+                    "3. Check model availability at https://openrouter.ai/models\n"
+                    f"4. Update OPENAI_MODEL in your .env file to a different model"
+                )
+            else:
+                detail_msg = (
+                    f"Model service error (502): {str(exc)}\n\n"
+                    "The model service returned a 502 Bad Gateway error. "
+                    "This usually indicates a temporary service outage."
+                )
+            
+            raise HTTPException(status_code=502, detail=detail_msg) from exc
+
         logger.error(f"Error processing query: {exc}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Error processing query: {str(exc)}") from exc
 
@@ -137,16 +222,43 @@ async def query(request: QueryRequest) -> QueryResponse:
     if isinstance(response, dict) and "messages" in response:
         messages = response["messages"]
         logger.debug(f"📨 Extracted {len(messages)} messages from agent response")
+        
+        # Extract tools used - always check for validation
+        tools_used = _extract_tools_from_messages(messages)
+        logger.debug(f"🔧 Tools used: {tools_used}")
+        
+        # Validate that tools were used
+        if not tools_used:
+            error_msg = (
+                "Agent must use tools (rag_query or arxiv_search) to answer queries. "
+                "Direct LLM responses without tools are not allowed."
+            )
+            logger.warning(f"❌ Validation failed: {error_msg}")
+            raise HTTPException(
+                status_code=400,
+                detail=error_msg
+            )
+        
+        # Enforce: If rag_query yielded no results, arxiv_search must be used
+        rag_empty = _rag_empty_in_messages(messages)
+        if rag_empty and "rag_query" in tools_used and "arxiv_search" not in tools_used:
+            error_msg = (
+                "rag_query returned no results (RAG_EMPTY). The agent must call arxiv_search next. "
+                "Please retry; direct answers after empty RAG are not allowed."
+            )
+            logger.warning(f"❌ Validation failed: {error_msg}")
+            raise HTTPException(status_code=400, detail=error_msg)
+        
         answer = _content_from_messages(messages)
         logger.debug(f"💬 Answer extracted: {answer[:100]}...")
         
         # Extract debug info if requested
         debug_info = {}
         if request.debug:
-            tools_used = _extract_tools_from_messages(messages)
-            logger.debug(f"🔧 Tools used: {tools_used}")
             debug_info = {
                 "tools_used": tools_used,
+                "tools_required": True,
+                "tools_validation_passed": True,
                 "steps_taken": len(messages),
                 "messages_count": len(messages),
                 "model_provider": settings.llm_provider,
@@ -161,12 +273,22 @@ async def query(request: QueryRequest) -> QueryResponse:
                 elif "tokens" in response:
                     debug_info["total_tokens"] = response["tokens"]
     else:
+        # Direct response without messages structure - this should not happen with ReAct agent
+        # but if it does, we still need to validate
         answer = getattr(response, "content", str(response))
-        debug_info = {
-            "model_provider": settings.llm_provider,
-            "execution_time_ms": round(execution_time, 2),
-            "response_structure": "direct",
-        } if request.debug else {}
+        tools_used = []
+        logger.warning("⚠️ Received direct response without messages structure")
+        
+        # Reject direct responses
+        error_msg = (
+            "Agent must use tools (rag_query or arxiv_search) to answer queries. "
+            "Direct LLM responses without tools are not allowed."
+        )
+        logger.warning(f"❌ Validation failed: {error_msg}")
+        raise HTTPException(
+            status_code=400,
+            detail=error_msg
+        )
 
     logger.info(f"Query processed successfully in {execution_time:.2f}ms")
 
@@ -186,6 +308,10 @@ async def query_stream(request: QueryRequest) -> StreamingResponse:
         try:
             logger.info(f"Streaming query: {request.question[:100]}...")
             
+            # Collect all messages to validate tool usage at the end
+            all_messages = []
+            final_response = None
+            
             # Use astream for streaming responses
             async for chunk in agent.astream(
                 {"messages": [{"role": "user", "content": request.question}]}
@@ -196,13 +322,54 @@ async def query_stream(request: QueryRequest) -> StreamingResponse:
                     "timestamp": time.time() - start_time,
                 }
                 yield f"data: {json.dumps(chunk_data)}\n\n"
+                
+                # Collect messages from chunk for validation
+                if isinstance(chunk, dict):
+                    if "messages" in chunk:
+                        all_messages.extend(chunk["messages"])
+                    # Keep track of final response structure
+                    if "messages" in chunk or "agent" in chunk:
+                        final_response = chunk
             
-            # Send final summary
+            # Validate tool usage after streaming completes
             execution_time = (time.time() - start_time) * 1000
+            
+            # Extract tools used from collected messages
+            tools_used = _extract_tools_from_messages(all_messages) if all_messages else []
+            
+            # Check if tools were used
+            if not tools_used:
+                error_data = {
+                    "type": "error",
+                    "error": "Agent must use tools (rag_query or arxiv_search) to answer queries. Direct LLM responses without tools are not allowed.",
+                    "validation_failed": True,
+                    "execution_time_ms": round(execution_time, 2),
+                }
+                logger.warning("❌ Streaming validation failed: No tools used")
+                yield f"data: {json.dumps(error_data)}\n\n"
+                return
+            
+            # Enforce arxiv_search after empty RAG
+            rag_empty = _rag_empty_in_messages(all_messages or [])
+            if rag_empty and "rag_query" in tools_used and "arxiv_search" not in tools_used:
+                error_data = {
+                    "type": "error",
+                    "error": "rag_query returned RAG_EMPTY; agent must call arxiv_search before answering.",
+                    "validation_failed": True,
+                    "execution_time_ms": round(execution_time, 2),
+                }
+                logger.warning("❌ Streaming validation failed: RAG_EMPTY without arxiv_search")
+                yield f"data: {json.dumps(error_data)}\n\n"
+                return
+            
+            # Send final summary with validation status
             summary = {
                 "type": "done",
                 "execution_time_ms": round(execution_time, 2),
                 "model_provider": settings.llm_provider,
+                "tools_used": tools_used,
+                "tools_required": True,
+                "tools_validation_passed": True,
             }
             yield f"data: {json.dumps(summary)}\n\n"
             
@@ -220,6 +387,7 @@ async def query_stream(request: QueryRequest) -> StreamingResponse:
             error_type = type(exc).__name__
             error_str = str(exc)
             is_auth_error = "AuthenticationError" in error_type or "401" in error_str or "Unauthorized" in error_str
+            is_502_error = "InternalServerError" in error_type or "502" in error_str
             
             error_data = {
                 "type": "error",
@@ -231,6 +399,18 @@ async def query_stream(request: QueryRequest) -> StreamingResponse:
                     "OpenAI API authentication failed. Check OPENAI_API_KEY in .env file "
                     "or verify at https://platform.openai.com/api-keys"
                 )
+            elif is_502_error:
+                settings = get_settings()
+                model_name = settings.openai_model if hasattr(settings, 'openai_model') else "unknown"
+                base_url = settings.openai_base_url if hasattr(settings, 'openai_base_url') else None
+                
+                if base_url and "openrouter" in base_url.lower():
+                    error_data["hint"] = (
+                        f"Model '{model_name}' is unavailable on OpenRouter. "
+                        "Try a different model or check https://openrouter.ai/models for availability."
+                    )
+                else:
+                    error_data["hint"] = "Model service error (502). The service may be temporarily unavailable."
             
             logger.error(f"Streaming error: {exc}", exc_info=True)
             yield f"data: {json.dumps(error_data)}\n\n"

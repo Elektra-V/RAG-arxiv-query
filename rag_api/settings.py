@@ -29,6 +29,9 @@ class Settings(BaseSettings):
     openai_api_key: Optional[str] = None  # Required: OpenAI Platform API key
     openai_model: str = "gpt-4o-mini"  # Default: OpenAI model
     openai_embedding_model: Optional[str] = None  # Auto-detects based on LLM model if not set
+    openai_base_url: Optional[str] = None  # Optional: Custom base URL for gateway/proxy (e.g., OpenRouter, Together AI)
+    openrouter_http_referer: Optional[str] = None  # Optional: HTTP-Referer header for OpenRouter
+    openrouter_x_title: Optional[str] = None  # Optional: X-Title header for OpenRouter
 
     # HuggingFace configuration (optional fallback for local embeddings)
     huggingface_model: str = "sentence-transformers/all-MiniLM-L6-v2"
@@ -41,7 +44,7 @@ class Settings(BaseSettings):
     langsmith_endpoint: Optional[str] = None
 
     # Search configuration
-    duckduckgo_results: int = 3
+    arxiv_search_max_results: int = 5
 
     # Service ports
     langchain_host: str = "0.0.0.0"

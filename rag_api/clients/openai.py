@@ -38,17 +38,23 @@ def get_openai_client() -> OpenAI:
             "Example: OPENAI_API_KEY=sk-..."
         )
     
-    # Validate API key format
+    # Validate API key format (only warn for OpenAI Platform, gateways may use different formats)
     api_key_clean = api_key.strip()
     if not api_key_clean.startswith(("sk-", "sk_proj-", "sess-")):
         logger.warning(
-            f"⚠️  API key format might be invalid. "
+            f"⚠️  API key format might be invalid for OpenAI Platform. "
             f"OpenAI API keys typically start with 'sk-'. "
             f"Got: '{api_key_clean[:7]}...'"
         )
     
-    client = OpenAI(api_key=api_key_clean)
+    # Support custom base_url for gateways (OpenRouter, Together AI, etc.)
+    client_kwargs = {"api_key": api_key_clean}
+    if settings.openai_base_url:
+        client_kwargs["base_url"] = settings.openai_base_url
+        logger.info(f"✓ Using custom base URL: {settings.openai_base_url}")
+    else:
+        logger.info("✓ OpenAI Platform: Using default API endpoint")
     
-    logger.info("✓ OpenAI Platform: Using API key authentication")
+    client = OpenAI(**client_kwargs)
     
     return client

@@ -84,8 +84,8 @@ flowchart TD
       K[Studio UI / REST API] --> F[LangGraph Server]
       F --> G[LangChain ReAct Agent]
       G -->|Tool: RAG Query| H[Qdrant (Vector DB)]
+      G -->|Tool: arXiv Search| M[arXiv API]
       G -->|LLM Calls| I[OpenAI Chat Model (e.g., gpt-4o-mini)]
-      G -->|Optional| J[Web Search]
       F --> L[Responses + Debug]
     end
 
@@ -94,7 +94,7 @@ flowchart TD
 
     %% Apply classes
     class A,B,C,D,E ingest
-    class F,G,I,J,K,L serve
+    class F,G,I,K,L,M serve
     class H store
 
     %% Improve link contrast
@@ -123,6 +123,7 @@ Key points:
 - `EMBEDDING_PROVIDER`: `"openai"` (default, recommended) or `"huggingface"` (free local, CPU only, slower)
 - `ARXIV_QUERY`: Default query for ingestion
 - `ARXIV_MAX_DOCS`: Maximum documents to ingest
+- `ARXIV_SEARCH_MAX_RESULTS`: Maximum results for arxiv_search tool (default: 5)
 
 ---
 
