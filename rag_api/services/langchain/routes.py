@@ -14,9 +14,8 @@ from pydantic import BaseModel, Field
 from rag_api.services.langchain.agent import agent
 from rag_api.settings import get_settings
 
-# Configure detailed logging
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)  # Ensure debug level is set
+logger.setLevel(logging.DEBUG)
 
 router = APIRouter(prefix="", tags=["query"])
 
@@ -45,17 +44,9 @@ class DebugInfo(BaseModel):
 
 
 def _extract_tools_from_messages(messages: Iterable[Any]) -> list[str]:
-    """Extract tool names used from agent messages.
-    
-    Handles multiple message formats:
-    - LangChain message objects with tool_calls attribute
-    - Dict messages with tool_calls key
-    - Tool message types
-    - Content-based detection as fallback
-    """
+    """Extract tool names used from agent messages."""
     tools_used = []
     for message in messages:
-        # Check for tool_calls attribute (LangChain message objects)
         if hasattr(message, "tool_calls") and message.tool_calls:
             for tool_call in message.tool_calls:
                 if hasattr(tool_call, "name"):
@@ -63,7 +54,6 @@ def _extract_tools_from_messages(messages: Iterable[Any]) -> list[str]:
                 elif isinstance(tool_call, dict):
                     tools_used.append(tool_call.get("name", "unknown"))
         
-        # Check for tool_calls in dict format
         if isinstance(message, dict):
             if "tool_calls" in message and message["tool_calls"]:
                 for tool_call in message["tool_calls"]:
@@ -74,18 +64,15 @@ def _extract_tools_from_messages(messages: Iterable[Any]) -> list[str]:
                     elif hasattr(tool_call, "name"):
                         tools_used.append(tool_call.name)
             
-            # Check for tool message type
             if message.get("type") == "tool":
                 tool_name = message.get("name")
                 if tool_name:
                     tools_used.append(tool_name)
         
-        # Check message type attribute
         if hasattr(message, "type") and message.type == "tool":
             if hasattr(message, "name"):
                 tools_used.append(message.name)
         
-        # Fallback: content-based detection
         content = getattr(message, "content", message.get("content", "") if isinstance(message, dict) else "")
         if isinstance(content, str) and content.strip():
             if "rag_query" in content:
@@ -144,7 +131,7 @@ async def query(request: QueryRequest) -> QueryResponse:
             {"messages": [{"role": "user", "content": request.question}]}
         )
         
-        execution_time = (time.time() - start_time) * 1000  # Convert to ms
+        execution_time = (time.time() - start_time) * 1000
         logger.info(f"✅ Agent response received in {execution_time:.2f}ms")
         
     except httpx.ConnectError as exc:
@@ -152,7 +139,6 @@ async def query(request: QueryRequest) -> QueryResponse:
         logger.error(error_msg, exc_info=True)
         raise HTTPException(status_code=502, detail=error_msg) from exc
     except ValueError as exc:
-        # Configuration errors (missing API key, etc.)
         error_msg = str(exc)
         logger.error(f"Configuration error: {error_msg}", exc_info=True)
         raise HTTPException(
@@ -160,19 +146,16 @@ async def query(request: QueryRequest) -> QueryResponse:
             detail=f"Configuration error: {error_msg}\n\nPlease check your .env file and ensure OPENAI_API_KEY is set correctly."
         ) from exc
     except Exception as exc:
-        # Log full traceback for debugging
         error_type = type(exc).__name__
         error_str = str(exc)
         full_traceback = traceback.format_exc()
         
-        # Log detailed error information
         logger.error("=" * 80)
         logger.error(f"ERROR TYPE: {error_type}")
         logger.error(f"ERROR MESSAGE: {error_str}")
         logger.error(f"FULL TRACEBACK:\n{full_traceback}")
         logger.error("=" * 80)
         
-        # Check for OpenAI authentication errors
         if "AuthenticationError" in error_type or "401" in error_str or "Unauthorized" in error_str:
             logger.error(f"OpenAI authentication failed: {exc}", exc_info=True)
             raise HTTPException(
@@ -186,7 +169,6 @@ async def query(request: QueryRequest) -> QueryResponse:
                 )
         ) from exc
         
-        # Check for InternalServerError (502) from OpenRouter - model unavailable
         if "InternalServerError" in error_type or "502" in error_str:
             logger.error(f"Model service error (502): {exc}", exc_info=True)
             settings = get_settings()
@@ -218,16 +200,13 @@ async def query(request: QueryRequest) -> QueryResponse:
         logger.error(f"Error processing query: {exc}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Error processing query: {str(exc)}") from exc
 
-    # Extract answer
     if isinstance(response, dict) and "messages" in response:
         messages = response["messages"]
         logger.debug(f"📨 Extracted {len(messages)} messages from agent response")
         
-        # Extract tools used - always check for validation
         tools_used = _extract_tools_from_messages(messages)
         logger.debug(f"🔧 Tools used: {tools_used}")
         
-        # Validate that tools were used
         if not tools_used:
             error_msg = (
                 "Agent must use tools (rag_query or arxiv_search) to answer queries. "
@@ -239,7 +218,6 @@ async def query(request: QueryRequest) -> QueryResponse:
                 detail=error_msg
             )
         
-        # Enforce: If rag_query yielded no results, arxiv_search must be used
         rag_empty = _rag_empty_in_messages(messages)
         if rag_empty and "rag_query" in tools_used and "arxiv_search" not in tools_used:
             error_msg = (
@@ -252,7 +230,6 @@ async def query(request: QueryRequest) -> QueryResponse:
         answer = _content_from_messages(messages)
         logger.debug(f"💬 Answer extracted: {answer[:100]}...")
         
-        # Extract debug info if requested
         debug_info = {}
         if request.debug:
             debug_info = {
@@ -266,20 +243,16 @@ async def query(request: QueryRequest) -> QueryResponse:
                 "response_structure": "messages" if isinstance(response, dict) else "direct",
             }
             
-            # Try to extract token usage if available
             if isinstance(response, dict):
                 if "usage_metadata" in response:
                     debug_info["total_tokens"] = response["usage_metadata"]
                 elif "tokens" in response:
                     debug_info["total_tokens"] = response["tokens"]
     else:
-        # Direct response without messages structure - this should not happen with ReAct agent
-        # but if it does, we still need to validate
         answer = getattr(response, "content", str(response))
         tools_used = []
         logger.warning("⚠️ Received direct response without messages structure")
         
-        # Reject direct responses
         error_msg = (
             "Agent must use tools (rag_query or arxiv_search) to answer queries. "
             "Direct LLM responses without tools are not allowed."
@@ -308,11 +281,9 @@ async def query_stream(request: QueryRequest) -> StreamingResponse:
         try:
             logger.info(f"Streaming query: {request.question[:100]}...")
             
-            # Collect all messages to validate tool usage at the end
             all_messages = []
             final_response = None
             
-            # Use astream for streaming responses
             async for chunk in agent.astream(
                 {"messages": [{"role": "user", "content": request.question}]}
             ):
@@ -323,21 +294,16 @@ async def query_stream(request: QueryRequest) -> StreamingResponse:
                 }
                 yield f"data: {json.dumps(chunk_data)}\n\n"
                 
-                # Collect messages from chunk for validation
                 if isinstance(chunk, dict):
                     if "messages" in chunk:
                         all_messages.extend(chunk["messages"])
-                    # Keep track of final response structure
                     if "messages" in chunk or "agent" in chunk:
                         final_response = chunk
             
-            # Validate tool usage after streaming completes
             execution_time = (time.time() - start_time) * 1000
             
-            # Extract tools used from collected messages
             tools_used = _extract_tools_from_messages(all_messages) if all_messages else []
             
-            # Check if tools were used
             if not tools_used:
                 error_data = {
                     "type": "error",
@@ -349,7 +315,6 @@ async def query_stream(request: QueryRequest) -> StreamingResponse:
                 yield f"data: {json.dumps(error_data)}\n\n"
                 return
             
-            # Enforce arxiv_search after empty RAG
             rag_empty = _rag_empty_in_messages(all_messages or [])
             if rag_empty and "rag_query" in tools_used and "arxiv_search" not in tools_used:
                 error_data = {
@@ -362,7 +327,6 @@ async def query_stream(request: QueryRequest) -> StreamingResponse:
                 yield f"data: {json.dumps(error_data)}\n\n"
                 return
             
-            # Send final summary with validation status
             summary = {
                 "type": "done",
                 "execution_time_ms": round(execution_time, 2),
@@ -374,7 +338,6 @@ async def query_stream(request: QueryRequest) -> StreamingResponse:
             yield f"data: {json.dumps(summary)}\n\n"
             
         except ValueError as exc:
-            # Configuration errors
             error_data = {
                 "type": "error",
                 "error": str(exc),
@@ -383,7 +346,6 @@ async def query_stream(request: QueryRequest) -> StreamingResponse:
             logger.error(f"Configuration error: {exc}", exc_info=True)
             yield f"data: {json.dumps(error_data)}\n\n"
         except Exception as exc:
-            # Check for OpenAI authentication errors
             error_type = type(exc).__name__
             error_str = str(exc)
             is_auth_error = "AuthenticationError" in error_type or "401" in error_str or "Unauthorized" in error_str
@@ -438,7 +400,6 @@ async def debug() -> dict[str, Any]:
         },
     }
     
-    # Test Qdrant connection
     try:
         client = get_qdrant_client()
         collections = client.get_collections().collections
@@ -449,7 +410,6 @@ async def debug() -> dict[str, Any]:
             "collection_exists": settings.qdrant_collection in collection_names,
         }
         
-        # Check collection info if it exists
         if settings.qdrant_collection in collection_names:
             info = client.get_collection(settings.qdrant_collection)
             debug_info["qdrant"]["collection_info"] = {
@@ -470,10 +430,8 @@ async def debug() -> dict[str, Any]:
         }
         debug_info["status"] = "degraded"
     
-    # Test OpenAI client (LLM)
     try:
         openai_client = get_openai_client()
-        # Try to list models to verify connection
         debug_info["llm"] = {
             "provider": settings.llm_provider,
             "model": settings.openai_model,
@@ -487,7 +445,6 @@ async def debug() -> dict[str, Any]:
         }
         debug_info["status"] = "degraded"
     
-    # Test Embeddings
     try:
         from rag_api.clients.embeddings import get_embeddings
         embeddings = get_embeddings()
@@ -514,7 +471,6 @@ async def status() -> dict[str, Any]:
     """Get service status and configuration."""
     settings = get_settings()
     
-    # Check connections
     status_info = {
         "service": "langchain-rag-api",
         "status": "healthy",
@@ -530,7 +486,6 @@ async def status() -> dict[str, Any]:
         },
     }
     
-    # Check Qdrant connection
     try:
         from rag_api.clients.qdrant import get_qdrant_client
         client = get_qdrant_client()

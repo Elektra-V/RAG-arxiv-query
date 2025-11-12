@@ -19,23 +19,17 @@ from rag_api.settings import get_settings
 
 
 def configure_langsmith() -> None:
-    """Configure LangSmith tracing for debugging and observability.
-    
-    Gracefully handles missing API keys by disabling tracing if no key is available.
-    """
+    """Configure LangSmith tracing for debugging and observability."""
     settings = get_settings()
     
     if settings.langsmith_tracing:
-        # Set LangSmith environment variables
         if settings.langsmith_api_key:
             os.environ["LANGCHAIN_API_KEY"] = settings.langsmith_api_key
             os.environ["LANGCHAIN_TRACING_V2"] = "true"
         else:
-            # If no API key but tracing enabled, check if it's in env
             if os.getenv("LANGCHAIN_API_KEY"):
                 os.environ["LANGCHAIN_TRACING_V2"] = "true"
             else:
-                # Disable if no API key available - don't crash, just disable tracing
                 os.environ["LANGCHAIN_TRACING_V2"] = "false"
                 import logging
                 logger = logging.getLogger(__name__)
@@ -64,7 +58,6 @@ def get_llm_model() -> BaseChatModel:
             "langchain-openai is not installed. Install it with: uv add langchain-openai"
         )
     
-    # Validate API key
     if not settings.openai_api_key or not settings.openai_api_key.strip():
         raise ValueError(
             "OPENAI_API_KEY is not set or is empty in .env file. "
@@ -72,18 +65,15 @@ def get_llm_model() -> BaseChatModel:
             "Example: OPENAI_API_KEY=sk-..."
         )
     
-    # Build ChatOpenAI kwargs
     chat_kwargs = {
         "model": settings.openai_model,
         "api_key": settings.openai_api_key.strip(),
         "temperature": 0,
     }
     
-    # Add base_url if using a gateway
     if settings.openai_base_url:
         chat_kwargs["base_url"] = settings.openai_base_url
         
-        # Add OpenRouter headers if using OpenRouter
         if "openrouter.ai" in settings.openai_base_url:
             default_headers = {}
             if settings.openrouter_http_referer:
@@ -98,8 +88,6 @@ def get_llm_model() -> BaseChatModel:
 
 def build_agent():
     """Construct the ReAct agent with configured tools."""
-
-    # Configure LangSmith before building agent
     configure_langsmith()
     
     model = get_llm_model()

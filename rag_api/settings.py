@@ -60,7 +60,7 @@ class Settings(BaseSettings):
 @lru_cache
 def get_settings() -> Settings:
     """Return cached application settings.
-    
+
     Note: Settings are cached for performance. If you change .env file,
     restart the application or clear the cache for changes to take effect.
     """

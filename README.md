@@ -1,316 +1,175 @@
-# RAG API - OpenAI Platform
+# RAG API - arXiv Query System
 
-**Retrieval Augmented Generation system using OpenAI Platform for academic paper queries.**
+Retrieval Augmented Generation system for academic paper queries using LangChain ReAct agent with RAG and arXiv search tools.
 
-## ✨ Features
+## Quick Start
 
-- OpenAI Platform integration with API key authentication
-- Fast embeddings via OpenAI Platform
-- Ready-to-use RAG pipeline with academic paper queries
-- Simple, clean codebase
-
----
-
-## 🚀 Quick Start
-
-### 1. Setup Configuration
+### 1. Configure Environment
 
 ```bash
 cp env.example .env
 ```
 
-### 2. Configure OpenAI Platform
+Edit `.env` with your API keys and settings.
 
-Edit `.env` with your OpenAI API key:
-
-```env
-LLM_PROVIDER="openai"
-EMBEDDING_PROVIDER="openai"
-OPENAI_API_KEY="sk-..."  # Your OpenAI Platform API key
-OPENAI_MODEL="gpt-4o-mini"  # OpenAI model
-# OPENAI_EMBEDDING_MODEL=""  # Leave empty for auto-detection (defaults to text-embedding-3-small)
-```
-
-### 3. Install Dependencies & Start Services
+### 2. Install Dependencies
 
 ```bash
-# Install dependencies
 uv sync
+```
 
-# Start Qdrant (vector database)
-docker compose up -d qdrant
+### 3. Activate Virtual Environment
 
-# Ingest documents (REQUIRED before querying!)
+```bash
+source .venv/bin/activate  # or use uv run for commands
+```
+
+### 4. Start Docker Services
+
+```bash
+docker compose up --build
+```
+
+This starts Qdrant (vector database) on port 6334.
+
+### 5. Run Ingestion
+
+Ingest arXiv papers into the vector database:
+
+```bash
 uv run rag-api-ingest --query "machine learning" --max-docs 5
+```
 
-# Test your API key (recommended - helps catch issues early)
-uv run python test_openai_key.py
+### 6. Start LangGraph Studio
 
-# Start server
+```bash
 uv run langgraph dev
-# Access Studio at: http://localhost:8123
-# (For cluster access, see CLUSTER_ACCESS.md)
 ```
 
-**Done!** The Studio UI URL will be displayed - use it to query your RAG system.
+Access Studio at `http://localhost:8123` or use the URL shown in the output.
 
-**⚠️  Getting 401 errors?** Run `uv run python test_openai_key.py` to diagnose API key issues.
+**Note:** If Studio doesn't connect or crashes, set the base URL in LangSmith Studio website to match your local machine (e.g., `http://127.0.0.1:2024`).
 
 ---
 
-## 🧭 High-level Architecture
+## Architecture
 
-```mermaid
-flowchart TD
-    %% Layout
-    classDef default fill:#ffffff,stroke:#1f2937,color:#111827,stroke-width:1px
-
-    %% Accessible color classes (WCAG-friendly contrast)
-    classDef ingest fill:#fde68a,stroke:#92400e,color:#111827,stroke-width:1.5px  %% warm amber
-    classDef serve  fill:#bfdbfe,stroke:#1e40af,color:#111827,stroke-width:1.5px  %% soft blue
-    classDef store  fill:#bbf7d0,stroke:#166534,color:#111827,stroke-width:1.5px  %% mint green
-    classDef io     fill:#e5e7eb,stroke:#374151,color:#111827,stroke-width:1.5px  %% neutral gray
-
-    %% Ingestion
-    subgraph Ingestion
-      A[CLI: rag-api-ingest] --> B[Fetch arXiv papers]
-      B --> C[Chunk + Clean]
-      C --> D[Embeddings (OpenAI: text-embedding-3-small)]
-      D --> E[Upsert to Qdrant]
-    end
-
-    %% Serving
-    subgraph Serving
-      K[Studio UI / REST API] --> F[LangGraph Server]
-      F --> G[LangChain ReAct Agent]
-      G -->|Tool: RAG Query| H[Qdrant (Vector DB)]
-      G -->|Tool: arXiv Search| M[arXiv API]
-      G -->|LLM Calls| I[OpenAI Chat Model (e.g., gpt-4o-mini)]
-      F --> L[Responses + Debug]
-    end
-
-    %% Data flow from ingestion to serving
-    E -.-> H
-
-    %% Apply classes
-    class A,B,C,D,E ingest
-    class F,G,I,K,L,M serve
-    class H store
-
-    %% Improve link contrast
-    linkStyle default stroke:#4b5563,stroke-width:1.5px
 ```
-
-Key points:
-- One ingestion path populates Qdrant. Serving reads from the same collection.
-- OpenAI is used for both LLM and embeddings by default.
-- Studio UI talks to the LangGraph server which runs the LangChain agent and tools.
+┌─────────────┐
+│  Studio UI │
+└──────┬──────┘
+       │
+┌──────▼──────────┐
+│ LangGraph Server│
+└──────┬──────────┘
+       │
+┌──────▼──────────────┐
+│  ReAct Agent        │
+│  - rag_query        │──► Qdrant (Vector DB)
+│  - arxiv_search     │──► arXiv API
+└──────┬──────────────┘
+       │
+┌──────▼──────┐
+│   LLM       │
+└─────────────┘
+```
 
 ---
 
-## 📋 Configuration Reference
+## Configuration
 
 ### Required Settings
 
-| Setting | Description | Example |
-|---------|-------------|---------|
-| `OPENAI_API_KEY` | Your OpenAI Platform API key | `"sk-..."` |
-| `OPENAI_MODEL` | OpenAI model to use | `"gpt-4o-mini"` (default)<br/>`"gpt-4o"`, `"gpt-3.5-turbo"` |
-| `OPENAI_EMBEDDING_MODEL` | Embedding model (optional) | Leave empty for auto-detection<br/>Defaults to `"text-embedding-3-small"` |
+- `OPENAI_API_KEY`: Your OpenAI API key (or OpenRouter/other gateway)
+- `OPENAI_MODEL`: Model name (e.g., `gpt-4o-mini`, `openai/gpt-oss-20b:free`)
+- `OPENAI_BASE_URL`: Optional gateway URL (e.g., `https://openrouter.ai/api/v1`)
 
 ### Optional Settings
 
-- `EMBEDDING_PROVIDER`: `"openai"` (default, recommended) or `"huggingface"` (free local, CPU only, slower)
-- `ARXIV_QUERY`: Default query for ingestion
-- `ARXIV_MAX_DOCS`: Maximum documents to ingest
-- `ARXIV_SEARCH_MAX_RESULTS`: Maximum results for arxiv_search tool (default: 5)
+- `ARXIV_SEARCH_MAX_RESULTS`: Max results for arXiv search (default: 5)
+- `LANGSMITH_API_KEY`: LangSmith API key for tracing
+- `LANGSMITH_ENDPOINT`: LangSmith endpoint (US: `https://api.smith.langchain.com`, EU: `https://eu.api.smith.langchain.com`)
+- `LANGSMITH_PROJECT`: Project name for LangSmith traces
+- `LANGSMITH_TRACING`: Enable/disable tracing (default: `false`)
+
+See `env.example` for all available settings.
 
 ---
 
-## 📖 Complete Workflow
+## Usage
 
-### Step 1: Ingest Documents (MUST DO FIRST!)
+### Query via Studio UI
 
-Your database starts empty. Populate it:
+1. Start LangGraph Studio: `uv run langgraph dev`
+2. Open the Studio URL in your browser
+3. Enter your question in the chat interface
+4. The agent will use `rag_query` first, then `arxiv_search` if needed
 
-```bash
-uv run rag-api-ingest --query "quantum computing" --max-docs 5
-```
+### Query via API
 
-**What happens:**
-- Downloads arXiv papers matching your query
-- Creates embeddings (vector representations)
-- Stores in Qdrant vector database
-
-**Verify ingestion:**
-```bash
-curl http://localhost:6334/collections/arxiv_papers
-# Should show your documents with points_count > 0
-```
-
-### Step 2: Query the System
-
-**Option A: LangGraph Studio**
-
-**On Linux Cluster or Local Machine:**
-```bash
-# Run without tunnel (tunnel may not work on cluster networks)
-uv run langgraph dev
-
-# Access Studio at: http://localhost:8123
-# Access API docs at: http://localhost:9010/docs
-```
-
-**For Remote Cluster Access:**
-Use SSH port forwarding (see `CLUSTER_ACCESS.md` for details):
-```bash
-# On local machine: Forward ports
-ssh -L 8123:localhost:8123 -L 9010:localhost:9010 user@cluster
-
-# On cluster: Start server (without tunnel)
-uv run langgraph dev
-
-# On local browser: http://localhost:8123
-```
-
-**Option B: Direct API**
 ```bash
 curl -X POST http://localhost:9010/query \
   -H "Content-Type: application/json" \
   -d '{"question": "What is quantum computing?", "debug": true}'
 ```
 
-**Option C: API Documentation**
-- Open: http://localhost:9010/docs
-- Interactive API testing
+### API Documentation
 
-### Step 3: Debug & Status
+Visit `http://localhost:9010/docs` for interactive API documentation.
+
+---
+
+## Troubleshooting
+
+### Port Already in Use
 
 ```bash
-# Detailed system info
-curl http://localhost:9010/debug | jq '.'
-
-# Service status
-curl http://localhost:9010/status
-
-# Qdrant collections
-curl http://localhost:6334/collections
+docker compose down
+lsof -ti :6334 | xargs kill -9  # Qdrant
+lsof -ti :2024 | xargs kill -9  # LangGraph
 ```
 
----
+### Empty Database
 
-## 🔧 Troubleshooting
+Run ingestion first: `uv run rag-api-ingest --query "topic" --max-docs 5`
 
-### "Connection failed" or "Unauthorized" (401 error)
-- **Test your API key**: Run `uv run python test_openai_key.py` to verify the key is valid
-- Verify `OPENAI_API_KEY` in `.env` is correct (should start with `sk-`)
-- Check if your API key has sufficient credits at https://platform.openai.com/usage
-- Verify the key is active (not revoked) at https://platform.openai.com/api-keys
-- Try creating a new API key if the current one doesn't work
+### Studio Connection Issues
 
-### "Model not found"
-- Check available models: https://platform.openai.com/docs/models
-- Update `OPENAI_MODEL` in `.env` with correct model name
+1. Ensure LangGraph server is running: `uv run langgraph dev`
+2. Set base URL in LangSmith Studio website to match local URL
+3. Use Chrome browser (Safari may have issues with localhost)
 
-### "collections": [] - Empty database
-- **You must ingest documents first!**
-- Run: `uv run rag-api-ingest --query "topic" --max-docs 5`
+### Authentication Errors
 
-### "Port already in use"
-- **Check what's using the port**: `lsof -i :6334` or `docker ps | grep qdrant`
-- **Stop containers**: `docker compose down`
-- **Remove stuck containers**: `docker compose down --remove-orphans`
-
-### "langgraph: command not found"
-- Run: `uv sync` first
-- Then: `uv run langgraph dev`
-
-### Cloudflare tunnel fails on cluster
-- Use `uv run langgraph dev` without `--tunnel` flag
-- For remote access, use SSH port forwarding (see `CLUSTER_ACCESS.md`)
-- Access Studio at `http://localhost:8123` or via port forwarding
+- Verify `OPENAI_API_KEY` is set correctly in `.env`
+- Check API key has credits/usage remaining
+- For OpenRouter, ensure model name is correct (e.g., `openai/gpt-oss-20b:free`)
 
 ---
 
-## 📂 Project Structure
+## Project Structure
 
 ```
 rag-api/
-├── .env                      # Your configuration (copy from env.example)
-├── env.example               # Configuration template
+├── .env                 # Your configuration (copy from env.example)
+├── env.example          # Configuration template
 ├── rag_api/
-│   ├── settings.py           # Configuration loader
-│   ├── clients/              # API clients (OpenAI, Qdrant, embeddings)
-│   ├── ingestion/            # Document ingestion pipeline
-│   └── services/             # API services (LangChain, LlamaIndex)
-└── docker-compose.yml         # Docker services (Qdrant)
+│   ├── settings.py      # Configuration loader
+│   ├── clients/         # API clients (OpenAI, Qdrant, embeddings)
+│   ├── ingestion/       # Document ingestion pipeline
+│   └── services/        # API services (LangChain, LlamaIndex)
+├── docker-compose.yml    # Docker services (Qdrant)
+└── start_studio.sh      # Helper script to start Studio
 ```
 
 ---
 
-## 🎯 What This System Does
+## How It Works
 
-1. **Downloads** arXiv papers based on search query
-2. **Creates embeddings** (vector representations using OpenAI)
-3. **Stores** in Qdrant (vector database for similarity search)
-4. **Retrieves** relevant documents for user questions
-5. **Generates** answers using LLM with retrieved context (RAG)
+1. **Ingestion**: Downloads arXiv papers, creates embeddings, stores in Qdrant
+2. **Query**: User asks a question
+3. **RAG Query**: Agent searches ingested papers in Qdrant vector database
+4. **arXiv Search**: If RAG returns empty, agent searches arXiv API directly
+5. **Response**: Agent synthesizes answer from retrieved information
 
-**Services:**
-- **Qdrant** (port 6334): Vector database
-- **LangGraph API** (port 9010): RAG agent with tools
-- **LlamaIndex API** (port 9020): Direct RAG queries
-- **Ingestion** (port 9030): Document processing
-
----
-
-## 💡 Tips
-
-- **Cluster access**: If tunnel fails, use `uv run langgraph dev` (without `--tunnel`) and SSH port forwarding (see `CLUSTER_ACCESS.md`)
-- **Ingest before querying**: Your database starts empty - ingest documents first!
-- **Use OpenAI embeddings**: Recommended - Set `EMBEDDING_PROVIDER="openai"` for fast embeddings
-- **Alternative**: Use `EMBEDDING_PROVIDER="huggingface"` for free local embeddings (CPU only, slower)
-
----
-
-## 🐳 Docker Commands
-
-### Basic Commands
-
-```bash
-# Start Qdrant only
-docker compose up -d qdrant
-
-# Stop all services
-docker compose down
-
-# View logs
-docker compose logs -f qdrant
-
-# Check running containers
-docker compose ps
-```
-
-### Troubleshooting & Cleanup Commands
-
-```bash
-# Remove orphan containers and clean up
-docker compose down --remove-orphans
-
-# Force remove and recreate containers
-docker compose down --remove-orphans && docker compose up -d --force-recreate
-
-# Clear Docker build cache
-docker builder prune -f
-
-# Remove unused containers, networks, images
-docker system prune -f
-
-# Check for port conflicts
-lsof -i :6334
-docker ps | grep -E "6334|9010|9020|9030"
-```
-
----
-
-**Ready to use!** Configure your `.env`, ingest documents, and start querying. 🚀
+The agent is configured to always use tools (`rag_query` or `arxiv_search`) and never respond directly without tool usage.

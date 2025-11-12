@@ -38,13 +38,13 @@ async def query(request: QueryRequest) -> QueryResponse:
     try:
         logger.info(f"Processing query: {request.question[:100]}...")
         
-        index = get_index()
-        query_engine = index.as_query_engine(
+    index = get_index()
+    query_engine = index.as_query_engine(
             similarity_top_k=request.similarity_top_k,
-            response_mode="compact",
-            summary_mode="tree_summarize",
-        )
-        response = query_engine.query(request.question)
+        response_mode="compact",
+        summary_mode="tree_summarize",
+    )
+    response = query_engine.query(request.question)
         
         execution_time = (time.time() - start_time) * 1000  # Convert to ms
         

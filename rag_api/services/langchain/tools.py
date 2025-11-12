@@ -61,7 +61,6 @@ def arxiv_search(query: str, max_results: int = 5) -> str:
         Returns error message if search fails.
     """
     settings = get_settings()
-    # Use the smaller of user-provided max_results or configured limit
     effective_max_results = min(max_results, settings.arxiv_search_max_results)
     
     try:
@@ -93,7 +92,6 @@ def arxiv_search(query: str, max_results: int = 5) -> str:
             arxiv_id = identifier_elem.text.split("/")[-1] if identifier_elem is not None and identifier_elem.text else "unknown"
             link = f"https://arxiv.org/abs/{arxiv_id}"
             
-            # Truncate summary if too long
             summary_short = summary[:500] + "..." if len(summary) > 500 else summary
             
             formatted.append(
