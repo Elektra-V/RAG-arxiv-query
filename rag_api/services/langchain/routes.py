@@ -115,6 +115,26 @@ def _content_from_messages(messages: Iterable[Any]) -> str:
     return ""
 
 
+def _strip_tool_log(text: str) -> str:
+    """Remove TOOL_LOG section and return only the ANSWER content if present."""
+    if not isinstance(text, str) or not text:
+        return text or ""
+    
+    upper = text.upper()
+    if "ANSWER:" in upper:
+        idx = upper.find("ANSWER:")
+        return text[idx + len("ANSWER:"):].strip()
+    
+    # Also remove any leading TOOL_LOG block if present without ANSWER
+    if "TOOL_LOG" in upper:
+        # Keep content after the first blank line following TOOL_LOG
+        parts = text.split("\n\n", 1)
+        if len(parts) == 2:
+            return parts[1].strip()
+    
+    return text.strip()
+
+
 def _rag_empty_in_messages(messages: Iterable[Any]) -> bool:
     """Detect if RAG query returned empty signal in the conversation."""
     for message in messages:
@@ -251,7 +271,8 @@ async def query(request: QueryRequest) -> QueryResponse:
             logger.warning(f"❌ Validation failed: {error_msg}")
             raise HTTPException(status_code=400, detail=error_msg)
         
-        answer = _content_from_messages(messages)
+        raw_answer = _content_from_messages(messages)
+        answer = _strip_tool_log(raw_answer)
         logger.debug(f"💬 Answer extracted: {answer[:100]}...")
         
         # Extract debug info if requested
