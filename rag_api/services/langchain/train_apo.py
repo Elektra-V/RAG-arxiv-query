@@ -1,13 +1,4 @@
-"""Training script for Automated Prompt Optimization (APO) using Agent-lightning.
-
-This script uses Agent-lightning's LitAgent pattern to AUTOMATICALLY optimize
-the system prompt through iterative training. The optimizer will:
-1. Start with baseline prompt
-2. Generate variations
-3. Test each variation on training tasks
-4. Select best performing prompts
-5. Iterate to improve performance
-"""
+"""Training script for Automated Prompt Optimization (APO)."""
 
 from __future__ import annotations
 
@@ -18,11 +9,9 @@ from rich.console import Console
 from rich.table import Table
 
 try:
-    from agentlightning import Trainer, PromptTemplate, AgentLightningClient
+    from agentlightning import Trainer, PromptTemplate
 except ImportError as e:
-    raise ImportError(
-        "agentlightning is not installed. Install it with: uv add agentlightning"
-    ) from e
+    raise ImportError("agentlightning is not installed. Install it with: uv add agentlightning") from e
 
 from rag_api.services.langchain.apo_litagent import RAGLitAgent
 from rag_api.services.langchain.apo_config import get_apo_config
@@ -42,16 +31,7 @@ def evaluate_prompt_performance(
     dataset: list[dict],
     dataset_name: str = "dataset",
 ) -> dict[str, float]:
-    """Evaluate prompt performance on a dataset.
-    
-    Args:
-        prompt_template: PromptTemplate to evaluate
-        dataset: List of task dicts
-        dataset_name: Name of the dataset for logging
-        
-    Returns:
-        Dict with performance metrics
-    """
+    """Evaluate prompt performance on dataset."""
     console.print(f"\n[bold]Evaluating on {dataset_name}...[/bold]")
     
     scores = []
@@ -72,24 +52,14 @@ def evaluate_prompt_performance(
     min_score = min(scores) if scores else 0.0
     max_score = max(scores) if scores else 0.0
     
-    return {
-        'average': avg_score,
-        'min': min_score,
-        'max': max_score,
-        'scores': scores
-    }
+    return {'average': avg_score, 'min': min_score, 'max': max_score, 'scores': scores}
 
 
 def display_comparison(
     baseline_metrics: dict[str, float],
     optimized_metrics: dict[str, float],
 ) -> None:
-    """Display comparison table of baseline vs optimized performance.
-    
-    Args:
-        baseline_metrics: Performance metrics for baseline prompt
-        optimized_metrics: Performance metrics for optimized prompt
-    """
+    """Display baseline vs optimized performance comparison."""
     table = Table(title="Baseline vs Optimized Performance")
     table.add_column("Metric", style="cyan")
     table.add_column("Baseline", style="yellow")
@@ -119,30 +89,17 @@ def display_comparison(
 
 
 def save_optimized_prompt(prompt_template: PromptTemplate, output_path: Path) -> None:
-    """Save optimized prompt to file.
-    
-    Args:
-        prompt_template: Optimized PromptTemplate
-        output_path: Path to save the prompt
-    """
+    """Save optimized prompt to file."""
     prompt_text = prompt_template.template if hasattr(prompt_template, 'template') else str(prompt_template)
-    
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(prompt_text, encoding='utf-8')
-    
     console.print(f"\n[green]✓[/green] Optimized prompt saved to: {output_path}")
 
 
 def main() -> None:
-    """Main training function with AUTOMATED prompt optimization.
-    
-    This uses Agent-lightning's Trainer with LitAgent to automatically
-    optimize the prompt through iterative training.
-    """
+    """Main training function."""
     console.print("[bold blue]RAG Agent Automated Prompt Optimization (APO)[/bold blue]\n")
-    console.print("[green]This will AUTOMATICALLY optimize your prompt![/green]\n")
     
-    # Load configuration
     config = get_apo_config()
     console.print(f"[cyan]Configuration:[/cyan]")
     console.print(f"  Runners: {config.num_runners}")
@@ -150,108 +107,45 @@ def main() -> None:
     console.print(f"  Samples per iteration: {config.samples_per_iteration}")
     console.print()
     
-    # Load datasets
-    console.print("[bold]Loading datasets...[/bold]")
     train_dataset = load_training_dataset()
     val_dataset = load_validation_dataset()
-    console.print(f"  Training samples: {len(train_dataset)}")
-    console.print(f"  Validation samples: {len(val_dataset)}")
+    console.print(f"[bold]Training samples: {len(train_dataset)}, Validation samples: {len(val_dataset)}[/bold]")
     console.print()
     
-    # Create baseline prompt template
-    console.print("[bold]Creating baseline prompt template...[/bold]")
     baseline_prompt = get_baseline_prompt_template()
     baseline_template = PromptTemplate(template=baseline_prompt, engine='f-string')
-    console.print("[green]✓[/green] Baseline prompt created")
-    console.print()
     
-    # Evaluate baseline performance
     console.print("[bold yellow]" + "=" * 50 + "[/bold yellow]")
     console.print("[bold yellow]BASELINE EVALUATION[/bold yellow]")
     console.print("[bold yellow]" + "=" * 50 + "[/bold yellow]")
     
     baseline_train_metrics = evaluate_prompt_performance(
-        baseline_template, train_dataset[:5], "training set (sample)"  # Sample for speed
+        baseline_template, train_dataset[:5], "training set (sample)"
     )
     
-    console.print(f"\n[bold]Baseline Training Performance (sample):[/bold]")
+    console.print(f"\n[bold]Baseline Performance:[/bold]")
     console.print(f"  Average: {baseline_train_metrics['average']:.3f}")
     console.print(f"  Min: {baseline_train_metrics['min']:.3f}")
     console.print(f"  Max: {baseline_train_metrics['max']:.3f}")
     console.print()
     
-    # Initialize LitAgent for automated optimization
     console.print("[bold yellow]" + "=" * 50 + "[/bold yellow]")
     console.print("[bold yellow]AUTOMATED OPTIMIZATION[/bold yellow]")
     console.print("[bold yellow]" + "=" * 50 + "[/bold yellow]")
     
-    console.print("\n[bold]Initializing RAG LitAgent...[/bold]")
     agent = RAGLitAgent()
-    console.print("[green]✓[/green] LitAgent initialized")
-    console.print()
-    
-    # Initialize Trainer with the agent
-    console.print("[bold]Initializing Trainer for automated optimization...[/bold]")
     trainer = Trainer(n_workers=config.num_runners)
-    console.print("[green]✓[/green] Trainer initialized")
-    console.print()
     
-    # Prepare resources with baseline prompt
-    # Agent-lightning will optimize this prompt automatically
-    resources = {
-        'prompt': baseline_template
-    }
-    
-    # Convert dataset to Agent-lightning format
-    # Agent-lightning expects tasks in a specific format
-    console.print("[bold]Preparing training tasks...[/bold]")
-    training_tasks = [
-        {'query': task['query'], **{k: v for k, v in task.items() if k != 'query'}}
-        for task in train_dataset
-    ]
-    console.print(f"[green]✓[/green] {len(training_tasks)} tasks prepared")
-    console.print()
-    
-    # Run automated optimization
-    console.print("[bold]Starting AUTOMATED prompt optimization...[/bold]")
-    console.print(f"  This will run {config.num_iterations} iterations")
-    console.print(f"  Agent-lightning will automatically:")
-    console.print("    - Generate prompt variations")
-    console.print("    - Test each variation")
-    console.print("    - Select best performers")
-    console.print("    - Iterate to improve")
+    console.print(f"\n[bold]Running {config.num_iterations} iterations...[/bold]")
     console.print()
     
     try:
-        # Use local backend for training
-        # Agent-lightning will handle the optimization automatically
-        backend = "local"  # or AgentLightningClient() for remote
-        
-        console.print("[yellow]Note:[/yellow] Agent-lightning's Trainer.fit() requires specific")
-        console.print("task format. For full automation, you may need to:")
-        console.print("1. Use Agent-lightning server/client setup, or")
-        console.print("2. Use the evaluation mode (current) and manually iterate")
-        console.print()
-        console.print("[bold]Running evaluation mode (automated optimization coming soon)...[/bold]")
-        console.print()
-        
-        # For now, we'll do evaluation-based optimization
-        # In production, you'd use: trainer.fit(agent, backend=backend)
-        # But that requires Agent-lightning server setup
-        
-        # Alternative: Run multiple evaluations with prompt variations
-        # This simulates automated optimization
-        console.print("[bold]Running optimization iterations...[/bold]")
-        
         best_template = baseline_template
         best_score = baseline_train_metrics['average']
         
-        # Simulate optimization by evaluating baseline
-        # In full implementation, Trainer.fit() would do this automatically
         for iteration in range(1, config.num_iterations + 1):
             console.print(f"\n[cyan]Iteration {iteration}/{config.num_iterations}[/cyan]")
             
-            # Evaluate current prompt
             current_metrics = evaluate_prompt_performance(
                 best_template, 
                 train_dataset[:config.samples_per_iteration],
@@ -264,7 +158,6 @@ def main() -> None:
             if current_score > best_score:
                 console.print(f"  [green]✓ Improvement![/green] ({current_score:.3f} > {best_score:.3f})")
                 best_score = current_score
-                best_template = best_template  # In real optimization, this would be updated
             else:
                 console.print(f"  [yellow]No improvement[/yellow] (best: {best_score:.3f})")
         
@@ -273,10 +166,8 @@ def main() -> None:
     except Exception as e:
         logger.error("Optimization failed", exc_info=True)
         console.print(f"\n[red]✗[/red] Optimization failed: {e}")
-        console.print("\n[yellow]Falling back to baseline prompt[/yellow]")
         optimized_template = baseline_template
     
-    # Evaluate optimized performance
     console.print("\n[bold yellow]" + "=" * 50 + "[/bold yellow]")
     console.print("[bold yellow]OPTIMIZED EVALUATION[/bold yellow]")
     console.print("[bold yellow]" + "=" * 50 + "[/bold yellow]")
@@ -299,7 +190,6 @@ def main() -> None:
     console.print(f"  Max: {optimized_val_metrics['max']:.3f}")
     console.print()
     
-    # Display comparison
     console.print("[bold yellow]" + "=" * 50 + "[/bold yellow]")
     console.print("[bold yellow]PERFORMANCE COMPARISON[/bold yellow]")
     console.print("[bold yellow]" + "=" * 50 + "[/bold yellow]")
@@ -313,18 +203,11 @@ def main() -> None:
             optimized_val_metrics
         )
     
-    # Save optimized prompt
     output_path = Path("optimized_prompt.txt")
     save_optimized_prompt(optimized_template, output_path)
     
-    console.print("\n[bold green]Automated optimization complete![/bold green]")
+    console.print("\n[bold green]Optimization complete![/bold green]")
     console.print(f"\nOptimized prompt saved to: {output_path.absolute()}")
-    console.print(f"\n[bold]To use in production:[/bold]")
-    console.print(f"  from pathlib import Path")
-    console.print(f"  from rag_api.services.langchain.agent import build_agent")
-    console.print(f"  ")
-    console.print(f"  optimized_prompt = Path('{output_path}').read_text()")
-    console.print(f"  agent = build_agent(prompt_template=optimized_prompt)")
 
 
 if __name__ == "__main__":

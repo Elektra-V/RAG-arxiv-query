@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import os
+import logging
+from pathlib import Path
 
 from langchain_core.language_models import BaseChatModel
 
@@ -17,9 +19,11 @@ from rag_api.clients.openai import get_openai_client
 from rag_api.services.langchain.tools import get_tools
 from rag_api.settings import get_settings
 
+logger = logging.getLogger(__name__)
+
 
 def configure_langsmith() -> None:
-    """Configure LangSmith tracing for debugging and observability."""
+    """Configure LangSmith tracing."""
     settings = get_settings()
     
     if settings.langsmith_tracing:
@@ -31,12 +35,9 @@ def configure_langsmith() -> None:
                 os.environ["LANGCHAIN_TRACING_V2"] = "true"
             else:
                 os.environ["LANGCHAIN_TRACING_V2"] = "false"
-                import logging
-                logger = logging.getLogger(__name__)
                 logger.warning(
                     "LangSmith tracing is enabled but no API key found. "
-                    "Set LANGSMITH_API_KEY or LANGCHAIN_API_KEY to enable tracing. "
-                    "Tracing is now disabled."
+                    "Set LANGSMITH_API_KEY or LANGCHAIN_API_KEY to enable tracing."
                 )
                 return
         
@@ -50,13 +51,11 @@ def configure_langsmith() -> None:
 
 
 def get_llm_model() -> BaseChatModel:
-    """Get the configured LLM model for OpenAI Platform."""
+    """Get configured LLM model."""
     settings = get_settings()
 
     if ChatOpenAI is None:
-        raise ImportError(
-            "langchain-openai is not installed. Install it with: uv add langchain-openai"
-        )
+        raise ImportError("langchain-openai is not installed. Install it with: uv add langchain-openai")
     
     if not settings.openai_api_key or not settings.openai_api_key.strip():
         raise ValueError(
@@ -87,21 +86,12 @@ def get_llm_model() -> BaseChatModel:
 
 
 def build_agent(prompt_template: str | None = None):
-    """Construct the ReAct agent with configured tools.
-    
-    Args:
-        prompt_template: Optional optimized prompt template string.
-                         If None, uses the baseline prompt.
-    
-    Returns:
-        Configured ReAct agent
-    """
+    """Construct ReAct agent with configured tools."""
     configure_langsmith()
     
     model = get_llm_model()
     tools = get_tools()
     
-    # Use provided prompt template or fall back to baseline
     if prompt_template is None:
         from rag_api.services.langchain.prompt_template import get_baseline_prompt_template
         prompt = get_baseline_prompt_template()
@@ -112,74 +102,44 @@ def build_agent(prompt_template: str | None = None):
 
 
 def _load_optimized_prompt() -> str | None:
-    """Load optimized prompt from file if it exists.
-    
-    Returns:
-        Optimized prompt string if file exists, None otherwise
-    """
-    from pathlib import Path
-    import logging
-    
-    logger = logging.getLogger(__name__)
+    """Load optimized prompt from file if exists."""
     settings = get_settings()
     
-    # Check custom path from settings first
     if settings.apo_optimized_prompt_path:
         optimized_path = Path(settings.apo_optimized_prompt_path)
         if optimized_path.exists():
             try:
-                prompt = optimized_path.read_text(encoding='utf-8')
-                logger.info(f"✓ Loaded optimized prompt from {optimized_path}")
-                return prompt
+                return optimized_path.read_text(encoding='utf-8')
             except Exception as e:
-                logger.warning(f"Failed to load optimized prompt from {optimized_path}: {e}")
+                logger.warning(f"Failed to load optimized prompt: {e}")
     
-    # Check for optimized prompt file in current directory (created by train_apo.py)
     optimized_path = Path("optimized_prompt.txt")
-    
     if optimized_path.exists():
         try:
-            prompt = optimized_path.read_text(encoding='utf-8')
-            logger.info(f"✓ Loaded optimized prompt from {optimized_path}")
-            return prompt
+            return optimized_path.read_text(encoding='utf-8')
         except Exception as e:
             logger.warning(f"Failed to load optimized prompt: {e}")
-            return None
     
-    # Also check in project root (if running from different directory)
     project_root = Path(__file__).parent.parent.parent.parent
     optimized_path = project_root / "optimized_prompt.txt"
-    
     if optimized_path.exists():
         try:
-            prompt = optimized_path.read_text(encoding='utf-8')
-            logger.info(f"✓ Loaded optimized prompt from {optimized_path}")
-            return prompt
+            return optimized_path.read_text(encoding='utf-8')
         except Exception as e:
             logger.warning(f"Failed to load optimized prompt: {e}")
-            return None
     
     return None
 
 
-# Load optimized prompt if available, otherwise use baseline
-# This agent is used by routes.py for API endpoints
 optimized_prompt = _load_optimized_prompt()
 
 if optimized_prompt:
-    import logging
     from rag_api.services.langchain.prompt_template import get_baseline_prompt_template
     from rag_api.services.langchain.prompt_comparison import show_prompt_comparison
     
-    logger = logging.getLogger(__name__)
     baseline_prompt = get_baseline_prompt_template()
-    
-    # Show before/after comparison
     show_prompt_comparison(baseline_prompt, optimized_prompt)
-    
     agent = build_agent(prompt_template=optimized_prompt)
 else:
-    import logging
-    logger = logging.getLogger(__name__)
     logger.info("📝 Using baseline prompt (run train_apo.py to optimize)")
     agent = build_agent()

@@ -1,4 +1,4 @@
-"""Prompt template for the RAG agent, compatible with Agent-lightning optimization."""
+"""Prompt template for RAG agent."""
 
 from __future__ import annotations
 
@@ -6,11 +6,7 @@ from agentlightning import PromptTemplate
 
 
 def get_baseline_prompt_template() -> str:
-    """Get the baseline system prompt for the RAG agent.
-    
-    This is the original prompt extracted from agent.py.
-    Returns the prompt as a string that can be used with Agent-lightning.
-    """
+    """Return baseline system prompt."""
     return (
         "You are a research assistant specialized in answering academic and scientific queries. "
         "Your role is to retrieve and synthesize information from two sources: "
@@ -74,12 +70,5 @@ def get_baseline_prompt_template() -> str:
 
 
 def create_agentlightning_prompt_template() -> PromptTemplate:
-    """Create an Agent-lightning compatible PromptTemplate from the baseline prompt.
-    
-    Returns:
-        PromptTemplate instance that can be optimized by Agent-lightning.
-    """
-    baseline_prompt = get_baseline_prompt_template()
-    # PromptTemplate requires 'template' and 'engine' fields
-    return PromptTemplate(template=baseline_prompt, engine='f-string')
-
+    """Create Agent-lightning compatible PromptTemplate."""
+    return PromptTemplate(template=get_baseline_prompt_template(), engine='f-string')
