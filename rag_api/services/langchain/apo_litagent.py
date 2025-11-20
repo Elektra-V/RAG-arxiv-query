@@ -70,6 +70,7 @@ class RAGLitAgent(LitAgent):
         max_iterations = 10
         iteration = 0
         used_tools = []
+        tool_sequence = []
         
         while iteration < max_iterations:
             iteration += 1
@@ -101,6 +102,8 @@ class RAGLitAgent(LitAgent):
                         tool_name = tc.function.name
                         if tool_name not in used_tools:
                             used_tools.append(tool_name)
+                        if tool_name in ['rag_query', 'arxiv_search']:
+                            tool_sequence.append(tool_name)
                 
                 if not message.tool_calls:
                     break
@@ -141,6 +144,7 @@ class RAGLitAgent(LitAgent):
             query=query,
             response=final_response,
             used_tools=used_tools,
+            tool_sequence=tool_sequence,
             messages=messages,
             task=task
         )
@@ -152,10 +156,11 @@ class RAGLitAgent(LitAgent):
         query: str,
         response: str,
         used_tools: list[str],
+        tool_sequence: list[str],
         messages: list[dict],
         task: Any
     ) -> float:
-        """Calculate reward score: tool usage (30%), format (20%), completeness (30%), quality (20%)."""
+        """Calculate reward score with emphasis on intelligent tool selection."""
         if not response:
             return 0.0
         
@@ -163,10 +168,37 @@ class RAGLitAgent(LitAgent):
         
         used_rag_query = 'rag_query' in used_tools
         used_arxiv_search = 'arxiv_search' in used_tools
+        first_tool = tool_sequence[0] if tool_sequence else None
         
+        # Base score for using tools
         if used_rag_query or used_arxiv_search:
             score += 0.3
         
+        # Intelligent tool selection bonus
+        if isinstance(task, dict) and 'intelligent_choice' in task:
+            expected_first = task['intelligent_choice']
+            if expected_first == 'arxiv_search_first' and first_tool == 'arxiv_search':
+                score += 0.15  # Reward intelligent exception
+            elif expected_first == 'rag_query_first' and first_tool == 'rag_query':
+                score += 0.1  # Reward cost-effective choice
+            elif expected_first == 'arxiv_search_first' and first_tool == 'rag_query':
+                score -= 0.1  # Penalize missing intelligent exception
+            elif expected_first == 'rag_query_first' and first_tool == 'arxiv_search':
+                score -= 0.05  # Small penalty for unnecessary cost
+        
+        # Check query keywords for intelligent decision-making
+        query_lower = query.lower()
+        should_use_arxiv_first = any(
+            keyword in query_lower 
+            for keyword in ['recent', 'latest', 'new', 'newest', 'search arxiv', '2024', '2023', 'published in']
+        )
+        
+        if should_use_arxiv_first and first_tool == 'arxiv_search':
+            score += 0.1  # Reward intelligent decision-making
+        elif should_use_arxiv_first and first_tool == 'rag_query':
+            score -= 0.05  # Small penalty for missing context
+        
+        # Output format compliance
         has_tool_log = 'TOOL_LOG' in response.upper()
         has_answer = 'ANSWER:' in response.upper() or len(response) > 50
         
@@ -175,6 +207,7 @@ class RAGLitAgent(LitAgent):
         elif has_answer:
             score += 0.1
         
+        # Response completeness
         response_lower = response.lower()
         error_indicators = ['error', 'failed', 'unable to', 'cannot', 'empty']
         has_errors = any(indicator in response_lower for indicator in error_indicators)
@@ -184,6 +217,7 @@ class RAGLitAgent(LitAgent):
         elif len(response) > 50:
             score += 0.15
         
+        # Response quality
         has_citations = any(
             keyword in response_lower
             for keyword in ['arxiv', 'paper', 'source', 'reference', 'http', 'doi']
@@ -199,6 +233,7 @@ class RAGLitAgent(LitAgent):
         elif has_content:
             score += 0.1
         
+        # Check expected output if provided
         if isinstance(task, dict) and 'expected_output_contains' in task:
             expected = task['expected_output_contains']
             if isinstance(expected, str):

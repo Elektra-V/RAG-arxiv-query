@@ -21,6 +21,7 @@ from rag_api.services.langchain.apo_dataset import (
 )
 from rag_api.services.langchain.prompt_template import get_baseline_prompt_template
 from rag_api.services.langchain.apo_agent import rag_agent_rollout, rag_response_grader
+from rag_api.services.langchain.behavior_comparison import display_behavior_comparison
 
 logger = logging.getLogger(__name__)
 console = Console()
@@ -202,6 +203,50 @@ def main() -> None:
             evaluate_prompt_performance(baseline_template, val_dataset, "validation"),
             optimized_val_metrics
         )
+    
+    # Behavior comparison - show how baseline vs optimized make decisions
+    console.print("\n[bold yellow]" + "=" * 50 + "[/bold yellow]")
+    console.print("[bold yellow]BEHAVIOR COMPARISON[/bold yellow]")
+    console.print("[bold yellow]" + "=" * 50 + "[/bold yellow]")
+    
+    # Sample queries to test behavior
+    sample_queries = [
+        "What is quantum computing?",
+        "Find recent papers on transformers",
+        "Explain transformer architecture",
+        "What are the latest advances in LLMs?",
+        "Search arXiv for papers on neural networks"
+    ]
+    
+    console.print(f"\n[bold]Testing behavior on {len(sample_queries)} sample queries...[/bold]")
+    console.print()
+    
+    baseline_behavior_results = []
+    optimized_behavior_results = []
+    
+    for i, query in enumerate(sample_queries, 1):
+        console.print(f"  [{i}/{len(sample_queries)}] Testing: {query[:50]}...")
+        task = {'query': query}
+        
+        try:
+            # Baseline
+            baseline_rollout = rag_agent_rollout(task, baseline_template)
+            baseline_behavior_results.append(baseline_rollout)
+            
+            # Optimized
+            optimized_rollout = rag_agent_rollout(task, optimized_template)
+            optimized_behavior_results.append(optimized_rollout)
+        except Exception as e:
+            logger.error(f"Error testing query '{query}': {e}", exc_info=True)
+            baseline_behavior_results.append({'messages': []})
+            optimized_behavior_results.append({'messages': []})
+    
+    console.print()
+    display_behavior_comparison(
+        baseline_behavior_results,
+        optimized_behavior_results,
+        sample_queries
+    )
     
     output_path = Path("optimized_prompt.txt")
     save_optimized_prompt(optimized_template, output_path)
