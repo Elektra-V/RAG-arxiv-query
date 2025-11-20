@@ -173,3 +173,104 @@ rag-api/
 5. **Response**: Agent synthesizes answer from retrieved information
 
 The agent is configured to always use tools (`rag_query` or `arxiv_search`) and never respond directly without tool usage.
+
+---
+
+## Automatic Prompt Optimization (APO)
+
+The project includes Automatic Prompt Optimization using Agent-lightning to improve the agent's system prompt through iterative training.
+
+### Running APO Training
+
+1. **Ensure dependencies are installed:**
+   ```bash
+   uv sync
+   ```
+
+2. **Prepare your environment:**
+   - Ensure `OPENAI_API_KEY` is set in `.env`
+   - Ensure Qdrant is running (for RAG queries during training)
+   - Optionally ingest some papers for better training data:
+     ```bash
+     uv run rag-api-ingest --query "machine learning" --max-docs 10
+     ```
+
+3. **Run training:**
+   ```bash
+   uv run python -m rag_api.services.langchain.train_apo
+   ```
+
+   The training script will:
+   - Load training and validation datasets
+   - Evaluate baseline prompt performance
+   - Run APO optimization for multiple iterations
+   - Evaluate optimized prompt performance
+   - Display comparison metrics
+   - Save optimized prompt to `optimized_prompt.txt`
+
+### Using Optimized Prompts
+
+After training, you can use the optimized prompt in production:
+
+**Option 1: Load from file**
+```python
+from pathlib import Path
+from rag_api.services.langchain.agent import build_agent
+
+# Load optimized prompt
+optimized_prompt = Path("optimized_prompt.txt").read_text()
+
+# Build agent with optimized prompt
+agent = build_agent(prompt_template=optimized_prompt)
+```
+
+**Option 2: Update agent.py directly**
+Replace the baseline prompt in `agent.py` with the optimized prompt from `optimized_prompt.txt`.
+
+### APO Configuration
+
+You can customize APO training by modifying `rag_api/services/langchain/apo_config.py`:
+
+- `num_runners`: Number of parallel runners (default: 4)
+- `num_iterations`: Training iterations (default: 10)
+- `samples_per_iteration`: Samples per iteration (default: 8)
+- `use_validation`: Use validation set (default: True)
+
+### Training Datasets
+
+Training datasets are defined in `rag_api/services/langchain/apo_dataset.py`:
+
+- `load_training_dataset()`: Returns training queries with evaluation criteria
+- `load_validation_dataset()`: Returns validation queries
+
+You can customize these datasets by adding your own queries with:
+- `query`: The research question
+- `expected_tool_usage`: Which tools should be used (optional)
+- `expected_output_contains`: Key phrases that should appear (optional)
+- `quality_score`: Target quality score (optional)
+
+### Evaluation Criteria
+
+The grader (`rag_response_grader`) evaluates responses based on:
+
+1. **Tool Usage (30%)**: Did the agent use `rag_query` or `arxiv_search`?
+2. **Output Format (20%)**: Does the response follow the TOOL_LOG structure?
+3. **Completeness (30%)**: Is the response complete and error-free?
+4. **Response Quality (20%)**: Does it include citations and relevant content?
+
+### Troubleshooting APO Training
+
+**Training fails with API errors:**
+- Verify `OPENAI_API_KEY` is set correctly
+- Check API rate limits and quotas
+- Reduce `num_runners` in config if hitting rate limits
+
+**Low scores on all tasks:**
+- Ensure Qdrant is running and has ingested papers
+- Check that tools (`rag_query`, `arxiv_search`) are working correctly
+- Review dataset queries to ensure they're appropriate
+
+**No improvement after training:**
+- The baseline prompt may already be optimal
+- Try increasing `num_iterations` for more optimization
+- Review evaluation criteria in `rag_response_grader`
