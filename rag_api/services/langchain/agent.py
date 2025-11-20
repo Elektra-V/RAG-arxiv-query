@@ -140,5 +140,5 @@ if optimized_prompt:
     show_prompt_comparison(baseline_prompt, optimized_prompt)
     agent = build_agent(prompt_template=optimized_prompt)
 else:
-    logger.info("📝 Using baseline prompt (run train_apo.py to optimize)")
+    logger.info("Using baseline prompt (run train_apo.py to optimize)")
     agent = build_agent()

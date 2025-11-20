@@ -18,5 +18,5 @@ if optimized_prompt:
     show_prompt_comparison(baseline_prompt, optimized_prompt)
     graph = build_agent(prompt_template=optimized_prompt)
 else:
-    logger.info("📝 Using baseline prompt (run train_apo.py to optimize)")
+    logger.info("Using baseline prompt (run train_apo.py to optimize)")
     graph = build_agent()

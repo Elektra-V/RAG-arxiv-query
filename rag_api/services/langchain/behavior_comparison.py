@@ -52,21 +52,19 @@ def is_intelligent_choice(query: str, first_tool: str | None) -> tuple[bool, str
     """Determine if tool choice was intelligent based on query."""
     query_lower = query.lower()
     
-    # Keywords that suggest arxiv_search should be first
     arxiv_keywords = ['recent', 'latest', 'new', 'newest', 'search arxiv', '2024', '2023', 'published in']
     should_use_arxiv = any(kw in query_lower for kw in arxiv_keywords)
     
     if should_use_arxiv:
         if first_tool == 'arxiv_search':
-            return True, "✓ Intelligent: Used arxiv_search first for 'recent/latest' query"
+            return True, "Intelligent: Used arxiv_search first for 'recent/latest' query"
         else:
-            return False, "⚠ Could use arxiv_search first for 'recent/latest' query"
+            return False, "Could use arxiv_search first for 'recent/latest' query"
     
-    # General queries should use rag_query first (cost-effective)
     if first_tool == 'rag_query':
-        return True, "✓ Cost-effective: Used rag_query first for general query"
+        return True, "Cost-effective: Used rag_query first for general query"
     elif first_tool == 'arxiv_search':
-        return False, "⚠ Could use rag_query first (cheaper) for general query"
+        return False, "Could use rag_query first (cheaper) for general query"
     
     return False, "No tools used"
 
@@ -85,7 +83,6 @@ def display_behavior_comparison(
     console.print("[bold yellow]BASELINE vs OPTIMIZED BEHAVIOR COMPARISON[/bold yellow]")
     console.print("[bold yellow]" + "=" * 80 + "[/bold yellow]\n")
     
-    # Analyze baseline behavior
     baseline_stats = {
         'rag_query_first': 0,
         'arxiv_search_first': 0,
@@ -100,7 +97,6 @@ def display_behavior_comparison(
         'total_queries': len(optimized_results)
     }
     
-    # Detailed per-query table (optional)
     if verbose:
         table = Table(title="Tool Selection Behavior", show_header=True, header_style="bold magenta")
         table.add_column("Query", style="cyan", width=40)
@@ -118,7 +114,6 @@ def display_behavior_comparison(
         baseline_first = baseline_usage['first_tool'] or "None"
         optimized_first = optimized_usage['first_tool'] or "None"
         
-        # Track stats
         if baseline_first == 'rag_query':
             baseline_stats['rag_query_first'] += 1
         elif baseline_first == 'arxiv_search':
@@ -129,28 +124,24 @@ def display_behavior_comparison(
         elif optimized_first == 'arxiv_search':
             optimized_stats['arxiv_search_first'] += 1
         
-        # Check intelligent choice
-        baseline_intelligent, baseline_reason = is_intelligent_choice(query, baseline_first)
-        optimized_intelligent, optimized_reason = is_intelligent_choice(query, optimized_first)
+        baseline_intelligent, _ = is_intelligent_choice(query, baseline_first)
+        optimized_intelligent, _ = is_intelligent_choice(query, optimized_first)
         
         if baseline_intelligent:
             baseline_stats['intelligent_choices'] += 1
         if optimized_intelligent:
             optimized_stats['intelligent_choices'] += 1
         
-        # Add to table only if verbose
         if verbose:
-            # Determine improvement
             if optimized_intelligent and not baseline_intelligent:
-                improvement = f"[green]✓ Learned intelligent choice[/green]"
+                improvement = f"[green]Learned intelligent choice[/green]"
             elif optimized_intelligent and baseline_intelligent:
                 improvement = "[cyan]Both intelligent[/cyan]"
             elif not optimized_intelligent and baseline_intelligent:
-                improvement = "[red]⚠ Regressed[/red]"
+                improvement = "[red]Regressed[/red]"
             else:
                 improvement = "[yellow]No change[/yellow]"
             
-            # Truncate query for display
             query_display = query[:37] + "..." if len(query) > 40 else query
             table.add_row(query_display, baseline_first, optimized_first, improvement)
     
@@ -158,14 +149,12 @@ def display_behavior_comparison(
         console.print(table)
         console.print()
     
-    # Summary statistics
     summary_table = Table(title="Behavior Summary", show_header=True, header_style="bold cyan")
     summary_table.add_column("Metric", style="cyan")
     summary_table.add_column("Baseline", style="yellow")
     summary_table.add_column("Optimized", style="green")
     summary_table.add_column("Change", style="magenta")
     
-    # Intelligent choices percentage
     baseline_int_pct = (baseline_stats['intelligent_choices'] / baseline_stats['total_queries'] * 100) if baseline_stats['total_queries'] > 0 else 0
     optimized_int_pct = (optimized_stats['intelligent_choices'] / optimized_stats['total_queries'] * 100) if optimized_stats['total_queries'] > 0 else 0
     int_change = optimized_int_pct - baseline_int_pct
@@ -177,7 +166,6 @@ def display_behavior_comparison(
         f"[green]{int_change:+.1f}%[/green]" if int_change > 0 else f"[red]{int_change:+.1f}%[/red]"
     )
     
-    # rag_query first percentage (cost-effective)
     baseline_rag_pct = (baseline_stats['rag_query_first'] / baseline_stats['total_queries'] * 100) if baseline_stats['total_queries'] > 0 else 0
     optimized_rag_pct = (optimized_stats['rag_query_first'] / optimized_stats['total_queries'] * 100) if optimized_stats['total_queries'] > 0 else 0
     rag_change = optimized_rag_pct - baseline_rag_pct
@@ -192,14 +180,13 @@ def display_behavior_comparison(
     console.print(summary_table)
     console.print()
     
-    # Key insights
     console.print("[bold]Key Insights:[/bold]")
     if optimized_int_pct > baseline_int_pct:
-        console.print(f"  [green]✓[/green] Optimized prompt learned to make {int_change:.1f}% more intelligent tool choices")
+        console.print(f"  [green]Optimized prompt learned to make {int_change:.1f}% more intelligent tool choices[/green]")
     if optimized_rag_pct >= baseline_rag_pct:
-        console.print(f"  [green]✓[/green] Still maintains cost-effectiveness ({optimized_rag_pct:.1f}% use rag_query first)")
+        console.print(f"  [green]Still maintains cost-effectiveness ({optimized_rag_pct:.1f}% use rag_query first)[/green]")
     if optimized_int_pct > baseline_int_pct and optimized_rag_pct >= baseline_rag_pct * 0.9:
-        console.print(f"  [green]✓[/green] Best of both worlds: More intelligent AND cost-effective!")
+        console.print(f"  [green]Best of both worlds: More intelligent AND cost-effective![/green]")
     
     console.print()
 

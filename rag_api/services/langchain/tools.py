@@ -17,10 +17,9 @@ logger = logging.getLogger(__name__)
 
 @tool
 def rag_query(query: str) -> str:
-    """MANDATORY FIRST STEP: Query the Arxiv Qdrant collection for relevant chunks. 
+    """Query the Arxiv Qdrant collection for relevant chunks.
     
-    You MUST call this tool FIRST for every query before using arxiv_search.
-    This searches the ingested arXiv knowledge base using semantic similarity.
+    Searches the ingested arXiv knowledge base using semantic similarity.
     Returns up to 3 chunks (max 1000 chars each) or 'RAG_EMPTY' if no matches found."""
 
     settings = get_settings()
@@ -30,7 +29,7 @@ def rag_query(query: str) -> str:
     results = client.search(
         collection_name=settings.qdrant_collection,
         query_vector=embeddings.embed_query(query),
-        limit=3,  # Reduced from 4 to prevent context overflow
+        limit=3,
     )
 
     if not results:
@@ -45,7 +44,6 @@ def rag_query(query: str) -> str:
         source = metadata.get("source", "Unknown")
         text = match.payload.get("text", "") if match.payload else ""
         
-        # Truncate text to prevent context overflow
         if len(text) > max_chunk_len:
             text = text[:max_chunk_len] + "... [truncated]"
         
@@ -56,20 +54,11 @@ def rag_query(query: str) -> str:
 
 @tool
 def arxiv_search(query: str, max_results: int = 3) -> str:
-    """Search arXiv directly via API for research papers. 
+    """Search arXiv directly via API for research papers.
     
-    IMPORTANT: Only use this AFTER calling rag_query first. Use this ONLY when:
-    - rag_query returns 'RAG_EMPTY' (no results found)
-    - rag_query results are insufficient to answer the question
-    - You need recent papers not yet ingested into the knowledge base
-    
-    Args:
-        query: Search query for arXiv (e.g., "quantum computing", "cat:cs.AI", "all:machine learning")
-        max_results: Maximum number of papers to return (default: 3, max: 5)
-    
-    Returns:
-        Formatted string with paper titles, IDs, summaries, and links.
-        Returns 'ARXIV_EMPTY' if no papers found, or 'ARXIV_ERROR' if search fails.
+    Use when rag_query returns empty or insufficient results, or for recent papers.
+    Returns formatted string with paper titles, IDs, summaries, and links.
+    Returns 'ARXIV_EMPTY' if no papers found, or 'ARXIV_ERROR' if search fails.
     """
     settings = get_settings()
     effective_max_results = min(max(max_results, 1), settings.arxiv_search_max_results)
@@ -103,7 +92,6 @@ def arxiv_search(query: str, max_results: int = 3) -> str:
             arxiv_id = identifier_elem.text.split("/")[-1] if identifier_elem is not None and identifier_elem.text else "unknown"
             link = f"https://arxiv.org/abs/{arxiv_id}"
             
-            # Truncate summary to prevent context overflow
             max_summary_len = settings.arxiv_summary_max_length
             summary_short = summary[:max_summary_len] + "..." if len(summary) > max_summary_len else summary
             

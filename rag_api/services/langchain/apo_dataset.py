@@ -8,7 +8,6 @@ from typing import Dict, List
 def load_training_dataset() -> List[Dict[str, any]]:
     """Return training dataset for APO."""
     return [
-        # General queries - should use rag_query first (cost-effective)
         {
             'query': 'What is quantum computing?',
             'expected_tool_usage': ['rag_query'],
@@ -72,8 +71,6 @@ def load_training_dataset() -> List[Dict[str, any]]:
             'quality_score': 0.85,
             'intelligent_choice': 'rag_query_first'
         },
-        
-        # Queries requiring both tools
         {
             'query': 'What are the latest advances in large language models?',
             'expected_tool_usage': ['rag_query', 'arxiv_search'],
@@ -104,8 +101,6 @@ def load_training_dataset() -> List[Dict[str, any]]:
             'expected_output_contains': ['graph', 'neural network'],
             'quality_score': 0.85
         },
-        
-        # Intelligent exceptions - should use arxiv_search FIRST
         {
             'query': 'What are the most recent papers on transformers published in 2024?',
             'expected_tool_usage': ['arxiv_search'],

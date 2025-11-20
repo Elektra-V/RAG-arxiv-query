@@ -233,7 +233,6 @@ class RAGLitAgent(LitAgent):
         elif has_content:
             score += 0.1
         
-        # Check expected output if provided
         if isinstance(task, dict) and 'expected_output_contains' in task:
             expected = task['expected_output_contains']
             if isinstance(expected, str):

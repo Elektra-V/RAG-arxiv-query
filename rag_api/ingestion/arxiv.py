@@ -10,15 +10,11 @@ from langchain_community.document_loaders import ArxivLoader
 from langchain_core.documents import Document
 from tenacity import retry, stop_after_attempt, wait_exponential
 
-# PyMuPDF 1.26+ exposes `FileDataError` directly on the root `fitz` module
-# whereas older LangChain arXiv utilities still reference `fitz.fitz`. Provide
-# a lightweight shim so newer versions remain compatible without pinning.
-try:  # pragma: no cover - optional dependency
-    import fitz  # type: ignore
-
+try:
+    import fitz
     if not hasattr(fitz, "fitz"):
         setattr(fitz, "fitz", fitz)
-except ImportError:  # pragma: no cover - fitz is optional
+except ImportError:
     pass
 
 

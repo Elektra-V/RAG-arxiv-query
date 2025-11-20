@@ -229,7 +229,6 @@ def rag_response_grader(rollout_result: Dict[str, Any]) -> float:
     elif has_content:
         score += 0.1
     
-    # Check expected output if provided
     if 'expected_output_contains' in task:
         expected = task['expected_output_contains']
         if isinstance(expected, str):

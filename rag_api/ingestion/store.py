@@ -32,7 +32,6 @@ def ensure_collection() -> None:
     names = [collection.name for collection in collections]
 
     if settings.qdrant_collection in names:
-        # Verify collection has correct dimensions (in case provider changed)
         collection_info = client.get_collection(settings.qdrant_collection)
         current_size = collection_info.config.params.vectors.size if collection_info.config.params.vectors else 384
         expected_size = _get_embedding_dimension()
