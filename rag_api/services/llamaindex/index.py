@@ -15,7 +15,7 @@ except ImportError:
     OpenAIEmbedding = None
 
 try:
-from llama_index.embeddings.huggingface import HuggingFaceEmbedding
+    from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 except ImportError:
     HuggingFaceEmbedding = None
 
