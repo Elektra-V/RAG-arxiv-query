@@ -245,7 +245,8 @@ def main() -> None:
     display_behavior_comparison(
         baseline_behavior_results,
         optimized_behavior_results,
-        sample_queries
+        sample_queries,
+        verbose=False
     )
     
     output_path = Path("optimized_prompt.txt")

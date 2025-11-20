@@ -74,9 +74,13 @@ def is_intelligent_choice(query: str, first_tool: str | None) -> tuple[bool, str
 def display_behavior_comparison(
     baseline_results: List[Dict[str, Any]],
     optimized_results: List[Dict[str, Any]],
-    queries: List[str]
+    queries: List[str],
+    verbose: bool = False
 ) -> None:
-    """Display comparison of baseline vs optimized behavior."""
+    """Display comparison of baseline vs optimized behavior.
+    
+    If verbose=False (default), only show a concise summary table and key insights.
+    """
     console.print("\n[bold yellow]" + "=" * 80 + "[/bold yellow]")
     console.print("[bold yellow]BASELINE vs OPTIMIZED BEHAVIOR COMPARISON[/bold yellow]")
     console.print("[bold yellow]" + "=" * 80 + "[/bold yellow]\n")
@@ -96,12 +100,13 @@ def display_behavior_comparison(
         'total_queries': len(optimized_results)
     }
     
-    # Create comparison table
-    table = Table(title="Tool Selection Behavior", show_header=True, header_style="bold magenta")
-    table.add_column("Query", style="cyan", width=40)
-    table.add_column("Baseline First Tool", style="yellow", width=20)
-    table.add_column("Optimized First Tool", style="green", width=20)
-    table.add_column("Improvement", style="magenta", width=30)
+    # Detailed per-query table (optional)
+    if verbose:
+        table = Table(title="Tool Selection Behavior", show_header=True, header_style="bold magenta")
+        table.add_column("Query", style="cyan", width=40)
+        table.add_column("Baseline First Tool", style="yellow", width=20)
+        table.add_column("Optimized First Tool", style="green", width=20)
+        table.add_column("Improvement", style="magenta", width=30)
     
     for i, query in enumerate(queries):
         baseline_msgs = baseline_results[i].get('messages', []) if i < len(baseline_results) else []
@@ -146,15 +151,11 @@ def display_behavior_comparison(
         # Truncate query for display
         query_display = query[:37] + "..." if len(query) > 40 else query
         
-        table.add_row(
-            query_display,
-            baseline_first,
-            optimized_first,
-            improvement
-        )
+        table.add_row(query_display, baseline_first, optimized_first, improvement)
     
-    console.print(table)
-    console.print()
+    if verbose:
+        console.print(table)
+        console.print()
     
     # Summary statistics
     summary_table = Table(title="Behavior Summary", show_header=True, header_style="bold cyan")
