@@ -17,7 +17,11 @@ logger = logging.getLogger(__name__)
 
 @tool
 def rag_query(query: str) -> str:
-    """Query the Arxiv Qdrant collection for relevant chunks."""
+    """MANDATORY FIRST STEP: Query the Arxiv Qdrant collection for relevant chunks. 
+    
+    You MUST call this tool FIRST for every query before using arxiv_search.
+    This searches the ingested arXiv knowledge base using semantic similarity.
+    Returns up to 3 chunks (max 1000 chars each) or 'RAG_EMPTY' if no matches found."""
 
     settings = get_settings()
     embeddings = get_embeddings()
@@ -52,11 +56,11 @@ def rag_query(query: str) -> str:
 
 @tool
 def arxiv_search(query: str, max_results: int = 3) -> str:
-    """Search arXiv directly via API for research papers.
+    """Search arXiv directly via API for research papers. 
     
-    Use this when:
-    - rag_query returns no results or insufficient context
-    - You need to search broader arXiv coverage
+    IMPORTANT: Only use this AFTER calling rag_query first. Use this ONLY when:
+    - rag_query returns 'RAG_EMPTY' (no results found)
+    - rag_query results are insufficient to answer the question
     - You need recent papers not yet ingested into the knowledge base
     
     Args:
@@ -65,7 +69,7 @@ def arxiv_search(query: str, max_results: int = 3) -> str:
     
     Returns:
         Formatted string with paper titles, IDs, summaries, and links.
-        Returns error message if search fails.
+        Returns 'ARXIV_EMPTY' if no papers found, or 'ARXIV_ERROR' if search fails.
     """
     settings = get_settings()
     effective_max_results = min(max(max_results, 1), settings.arxiv_search_max_results)

@@ -26,18 +26,23 @@ def get_baseline_prompt_template() -> str:
         "## Required Workflow\n\n"
         "**CRITICAL**: You MUST use at least one tool for every query. Direct responses without tool usage are prohibited.\n\n"
         
-        "1. **Start with rag_query**: For any academic or research-related question, first search the ingested arXiv knowledge base. "
-        "This provides fast, semantic search over papers that have been processed and stored.\n"
-        "2. **Evaluate results**: If rag_query returns 'RAG_EMPTY' or the results are insufficient, proceed to arxiv_search.\n"
-        "3. **Use arxiv_search when**:\n"
-        "   - rag_query returns no results ('RAG_EMPTY') or insufficient context\n"
-        "   - You need broader arXiv coverage beyond the ingested papers\n"
+        "**MANDATORY FIRST STEP**: For EVERY query, you MUST call rag_query FIRST before considering arxiv_search. "
+        "This is non-negotiable. Only after rag_query returns 'RAG_EMPTY' or insufficient results should you use arxiv_search.\n\n"
+        
+        "1. **ALWAYS start with rag_query**: For ANY academic or research-related question, you MUST first call rag_query. "
+        "Do NOT skip this step. Do NOT use arxiv_search first. rag_query searches the ingested arXiv knowledge base "
+        "and provides fast, semantic search over papers that have been processed and stored.\n"
+        "2. **Evaluate rag_query results**: Only if rag_query returns 'RAG_EMPTY' or the results are clearly insufficient, "
+        "then proceed to arxiv_search.\n"
+        "3. **Use arxiv_search ONLY when**:\n"
+        "   - rag_query returns 'RAG_EMPTY' (no results found)\n"
+        "   - rag_query results are clearly insufficient to answer the question\n"
         "   - You need to find recent papers not yet ingested into the knowledge base\n"
-        "   - The query requires searching the full arXiv corpus\n"
         "4. **Synthesize and respond**: After retrieving information from tools, provide a clear, accurate answer "
         "based on the retrieved content. Cite sources (paper titles, arXiv IDs, URLs) when available.\n\n"
         
         "## Safety & Enforcement\n\n"
+        "- **NEVER use arxiv_search first**. You MUST call rag_query first for every query.\n"
         "- Never answer directly without using tools first. If rag_query is empty, you MUST call arxiv_search.\n"
         "- If BOTH tools fail (rag_query='RAG_EMPTY' and arxiv_search='ARXIV_EMPTY' or 'ARXIV_ERROR'), "
         "do NOT fabricate an answer. Explain the failure and provide concrete next steps (different terms, refine scope, run ingestion, etc.).\n"
@@ -58,6 +63,7 @@ def get_baseline_prompt_template() -> str:
         "<your final answer grounded in retrieved content; include citations>\n\n"
         
         "## Response Guidelines\n\n"
+        "- **ALWAYS call rag_query first** - this is mandatory for every query\n"
         "- Always use tools before formulating your answer - you are autonomous and should select the appropriate tool(s)\n"
         "- Base your responses on retrieved information, not general knowledge\n"
         "- If both tools fail to provide sufficient information (both return empty/error), provide a comprehensive explanation:\n"
@@ -65,7 +71,7 @@ def get_baseline_prompt_template() -> str:
         "  * Why the results were insufficient\n"
         "  * What the user can do (e.g., try different search terms, check if papers need to be ingested, verify query format)\n"
         "- Be precise and cite sources (paper titles, arXiv IDs, URLs) when available\n"
-        "- You can use both tools if needed - rag_query for semantic search, then arxiv_search for broader coverage"
+        "- Workflow: rag_query FIRST, then arxiv_search ONLY if rag_query is empty or insufficient"
     )
 
 
