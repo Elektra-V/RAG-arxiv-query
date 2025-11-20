@@ -121,8 +121,20 @@ def _load_optimized_prompt() -> str | None:
     import logging
     
     logger = logging.getLogger(__name__)
+    settings = get_settings()
     
-    # Check for optimized prompt file (created by train_apo.py)
+    # Check custom path from settings first
+    if settings.apo_optimized_prompt_path:
+        optimized_path = Path(settings.apo_optimized_prompt_path)
+        if optimized_path.exists():
+            try:
+                prompt = optimized_path.read_text(encoding='utf-8')
+                logger.info(f"✓ Loaded optimized prompt from {optimized_path}")
+                return prompt
+            except Exception as e:
+                logger.warning(f"Failed to load optimized prompt from {optimized_path}: {e}")
+    
+    # Check for optimized prompt file in current directory (created by train_apo.py)
     optimized_path = Path("optimized_prompt.txt")
     
     if optimized_path.exists():
