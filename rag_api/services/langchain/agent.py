@@ -15,7 +15,6 @@ except ImportError:
 
 from langgraph.prebuilt import create_react_agent
 
-from rag_api.clients.openai import get_openai_client
 from rag_api.services.langchain.tools import get_tools
 from rag_api.settings import get_settings
 
