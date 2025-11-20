@@ -178,7 +178,7 @@ The agent is configured to always use tools (`rag_query` or `arxiv_search`) and 
 
 ## Automatic Prompt Optimization (APO)
 
-The project includes Automatic Prompt Optimization using Agent-lightning to improve the agent's system prompt through iterative training.
+The project includes **AUTOMATED** Prompt Optimization using Agent-lightning to automatically improve the agent's system prompt through iterative training. The optimizer uses `RAGLitAgent` to automatically generate, test, and select the best prompt variations - no manual intervention needed!
 
 ### Running APO Training
 
