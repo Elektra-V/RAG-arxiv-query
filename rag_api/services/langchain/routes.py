@@ -167,7 +167,6 @@ async def query(request: QueryRequest) -> QueryResponse:
         error_str = str(exc)
         
         if "AuthenticationError" in error_type or "401" in error_str or "Unauthorized" in error_str:
-        if "AuthenticationError" in error_type or "401" in error_str or "Unauthorized" in error_str:
             logger.error(f"OpenAI authentication failed: {exc}", exc_info=True)
             raise HTTPException(
                 status_code=401,
