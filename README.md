@@ -2,6 +2,8 @@
 
 A Retrieval Augmented Generation system for querying academic papers using LangChain ReAct agent with vector database and arXiv search.
 
+**License:** MIT (see [LICENSE](LICENSE))
+
 ## Prerequisites
 
 - Docker and Docker Compose

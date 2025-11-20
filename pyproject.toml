@@ -3,6 +3,7 @@ name = "rag-api"
 version = "0.0.1"
 description = "Dual-service RAG API with LangChain and LlamaIndex frontends"
 readme = "README.md"
+license = {text = "MIT"}
 requires-python = ">=3.12"
 dependencies = [
     "python-dotenv>=1.0.1",
