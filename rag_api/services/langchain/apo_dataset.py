@@ -142,6 +142,41 @@ def load_training_dataset() -> List[Dict[str, any]]:
             'expected_output_contains': ['vision', 'transformer'],
             'quality_score': 0.85,
             'intelligent_choice': 'arxiv_search_first'
+        },
+        {
+            'query': 'asdfghjkl',
+            'expected_tool_usage': [],
+            'expected_output_contains': ['invalid', 'valid query'],
+            'quality_score': 0.9,
+            'is_invalid': True
+        },
+        {
+            'query': '123456789',
+            'expected_tool_usage': [],
+            'expected_output_contains': ['invalid', 'valid query'],
+            'quality_score': 0.9,
+            'is_invalid': True
+        },
+        {
+            'query': 'qwertyuiop',
+            'expected_tool_usage': [],
+            'expected_output_contains': ['invalid', 'valid query'],
+            'quality_score': 0.9,
+            'is_invalid': True
+        },
+        {
+            'query': 'hello world',
+            'expected_tool_usage': [],
+            'expected_output_contains': ['invalid', 'valid query'],
+            'quality_score': 0.85,
+            'is_invalid': True
+        },
+        {
+            'query': 'xyzabc123',
+            'expected_tool_usage': [],
+            'expected_output_contains': ['invalid', 'valid query'],
+            'quality_score': 0.9,
+            'is_invalid': True
         }
     ]
 
@@ -183,5 +218,19 @@ def load_validation_dataset() -> List[Dict[str, any]]:
             'expected_output_contains': ['contrastive'],
             'quality_score': 0.85,
             'intelligent_choice': 'arxiv_search_first'
+        },
+        {
+            'query': 'fghjklmnbvcxz',
+            'expected_tool_usage': [],
+            'expected_output_contains': ['invalid', 'valid query'],
+            'quality_score': 0.9,
+            'is_invalid': True
+        },
+        {
+            'query': 'random text here',
+            'expected_tool_usage': [],
+            'expected_output_contains': ['invalid', 'valid query'],
+            'quality_score': 0.85,
+            'is_invalid': True
         }
     ]

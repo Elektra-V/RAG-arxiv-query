@@ -170,7 +170,33 @@ class RAGLitAgent(LitAgent):
         used_arxiv_search = 'arxiv_search' in used_tools
         first_tool = tool_sequence[0] if tool_sequence else None
         
-        # Base score for using tools
+        # Check if query is invalid (gibberish)
+        query_lower = query.lower()
+        is_invalid_query = isinstance(task, dict) and task.get('is_invalid', False)
+        response_lower = response.lower()
+        
+        # Detect gibberish patterns
+        gibberish_patterns = [
+            len(query_lower) < 3,
+            query_lower.isdigit(),
+            all(not c.isalnum() for c in query_lower),
+            query_lower in ['asdfghjkl', 'qwertyuiop', '123456789', 'xyzabc123', 'fghjklmnbvcxz'],
+            len(set(query_lower)) < 3 and len(query_lower) > 5,
+        ]
+        
+        detected_invalid = any(gibberish_patterns) or is_invalid_query
+        
+        # Reward rejecting invalid queries without tool usage
+        if detected_invalid:
+            if not used_rag_query and not used_arxiv_search:
+                score += 0.5
+                if 'invalid' in response_lower or 'valid query' in response_lower:
+                    score += 0.3
+            else:
+                score -= 0.5
+            return min(max(score, 0.0), 1.0)
+        
+        # Base score for using tools (only for valid queries)
         if used_rag_query or used_arxiv_search:
             score += 0.3
         

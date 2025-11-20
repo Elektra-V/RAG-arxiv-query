@@ -166,7 +166,33 @@ def rag_response_grader(rollout_result: Dict[str, Any]) -> float:
     used_arxiv_search = 'arxiv_search' in tool_sequence
     first_tool = tool_sequence[0] if tool_sequence else None
     
-    # Base score for using tools
+    # Check if query is invalid (gibberish)
+    query = task.get('query', '').lower()
+    is_invalid_query = task.get('is_invalid', False)
+    response_lower = response.lower()
+    
+    # Detect gibberish patterns
+    gibberish_patterns = [
+        len(query) < 3,
+        query.isdigit(),
+        all(not c.isalnum() for c in query),
+        query in ['asdfghjkl', 'qwertyuiop', '123456789', 'xyzabc123', 'fghjklmnbvcxz'],
+        len(set(query)) < 3 and len(query) > 5,  # Too repetitive
+    ]
+    
+    detected_invalid = any(gibberish_patterns) or is_invalid_query
+    
+    # Reward rejecting invalid queries without tool usage
+    if detected_invalid:
+        if not used_rag_query and not used_arxiv_search:
+            score += 0.5  # Strong reward for correctly rejecting invalid query
+            if 'invalid' in response_lower or 'valid query' in response_lower:
+                score += 0.3  # Bonus for mentioning query is invalid
+        else:
+            score -= 0.5  # Strong penalty for using tools on invalid query
+        return min(max(score, 0.0), 1.0)
+    
+    # Base score for using tools (only for valid queries)
     if used_rag_query or used_arxiv_search:
         score += 0.3
     

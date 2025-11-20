@@ -245,6 +245,32 @@ These queries are designed to test the `rag_query` tool that searches the ingest
 
 ## Quick Test Suite (Priority Edge Cases)
 
+## Invalid Query Detection
+
+**Expected behavior:** Agent should NOT use any tools and politely inform user the query is invalid.
+
+1. `asdfghjkl`
+   - **Expected**: No tool usage, message asking for valid query
+   - **Tests**: Gibberish detection
+
+2. `123456789`
+   - **Expected**: No tool usage, message asking for valid query
+   - **Tests**: Numeric gibberish detection
+
+3. `qwertyuiop`
+   - **Expected**: No tool usage, message asking for valid query
+   - **Tests**: Keyboard mashing detection
+
+4. `hello world`
+   - **Expected**: No tool usage (not academic/scientific)
+   - **Tests**: Non-academic query rejection
+
+5. `xyzabc123`
+   - **Expected**: No tool usage, message asking for valid query
+   - **Tests**: Random character detection
+
+---
+
 Run these first to verify core functionality:
 
 1. **Empty Results**: `What is xyzabc123nonexistent?`
