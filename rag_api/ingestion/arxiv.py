@@ -63,12 +63,5 @@ def _fetch_via_api(query: str, max_docs: int) -> List[Document]:
 
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
 def load_documents(query: str, max_docs: int) -> List[Document]:
-    """Load arXiv documents using the native loader with API fallback."""
-
-    loader = ArxivLoader(query=query, load_max_docs=max_docs, load_all_available=False)
-    documents = loader.load()
-
-    if documents:
-        return documents
-
+    """Load arXiv documents using the API (ArxivLoader doesn't support max_docs parameter)."""
     return _fetch_via_api(query, max_docs)
