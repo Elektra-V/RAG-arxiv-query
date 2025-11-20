@@ -26,25 +26,32 @@ def rag_query(query: str) -> str:
     results = client.search(
         collection_name=settings.qdrant_collection,
         query_vector=embeddings.embed_query(query),
-        limit=4,
+        limit=3,  # Reduced from 4 to prevent context overflow
     )
 
     if not results:
         return "RAG_EMPTY: No matching documents found in the knowledge base."
 
     formatted = []
+    max_chunk_len = settings.rag_chunk_max_length
+    
     for match in results:
         metadata = match.payload.get("metadata", {}) if match.payload else {}
         title = metadata.get("title", "Untitled")
         source = metadata.get("source", "Unknown")
         text = match.payload.get("text", "") if match.payload else ""
+        
+        # Truncate text to prevent context overflow
+        if len(text) > max_chunk_len:
+            text = text[:max_chunk_len] + "... [truncated]"
+        
         formatted.append(f"[DB: {title}] ({source})\n{text}")
 
     return "\n\n".join(formatted)
 
 
 @tool
-def arxiv_search(query: str, max_results: int = 5) -> str:
+def arxiv_search(query: str, max_results: int = 3) -> str:
     """Search arXiv directly via API for research papers.
     
     Use this when:
@@ -54,14 +61,14 @@ def arxiv_search(query: str, max_results: int = 5) -> str:
     
     Args:
         query: Search query for arXiv (e.g., "quantum computing", "cat:cs.AI", "all:machine learning")
-        max_results: Maximum number of papers to return (default: 5)
+        max_results: Maximum number of papers to return (default: 3, max: 5)
     
     Returns:
         Formatted string with paper titles, IDs, summaries, and links.
         Returns error message if search fails.
     """
     settings = get_settings()
-    effective_max_results = min(max_results, settings.arxiv_search_max_results)
+    effective_max_results = min(max(max_results, 1), settings.arxiv_search_max_results)
     
     try:
         api_url = "https://export.arxiv.org/api/query"
@@ -92,7 +99,9 @@ def arxiv_search(query: str, max_results: int = 5) -> str:
             arxiv_id = identifier_elem.text.split("/")[-1] if identifier_elem is not None and identifier_elem.text else "unknown"
             link = f"https://arxiv.org/abs/{arxiv_id}"
             
-            summary_short = summary[:500] + "..." if len(summary) > 500 else summary
+            # Truncate summary to prevent context overflow
+            max_summary_len = settings.arxiv_summary_max_length
+            summary_short = summary[:max_summary_len] + "..." if len(summary) > max_summary_len else summary
             
             formatted.append(
                 f"[arXiv: {title}]\n"

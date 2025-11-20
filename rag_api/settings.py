@@ -45,6 +45,8 @@ class Settings(BaseSettings):
 
     # Search configuration
     arxiv_search_max_results: int = 5
+    rag_chunk_max_length: int = 1000  # Max characters per RAG chunk to prevent context overflow
+    arxiv_summary_max_length: int = 400  # Max characters per arXiv summary
 
     # Service ports
     langchain_host: str = "0.0.0.0"
