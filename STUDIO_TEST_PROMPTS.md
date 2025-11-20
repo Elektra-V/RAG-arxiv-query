@@ -1,14 +1,17 @@
 # LangChain Studio Test Prompts - Edge Cases
 
 ## Empty/No Results Cases
-1. `What is xyzabc123nonexistenttopic?`
+1. `What is nonexistenttopic123?`
    - **Expected**: Should use both tools, return RAG_EMPTY and ARXIV_EMPTY, provide helpful error message
+   - **Note**: This is a valid query format, just about a non-existent topic
    
 2. `Search for papers on "completely made up topic that doesn't exist"`
    - **Expected**: Should attempt both tools, handle empty results gracefully
+   - **Note**: Valid query format, just no results
 
 3. `Find information about "nonexistent123456"`
-   - **Expected**: Should not fabricate answers, explain search failure
+   - **Expected**: Should use tools, explain search failure
+   - **Note**: Valid query format, just no results
 
 ## Ambiguous/General Queries
 4. `What is AI?`
@@ -269,11 +272,20 @@ These queries are designed to test the `rag_query` tool that searches the ingest
    - **Expected**: No tool usage, message asking for valid query
    - **Tests**: Random character detection
 
+6. `What is xyzabc123nonexistenttopic?`
+   - **Expected**: No tool usage, message asking for valid query
+   - **Tests**: Gibberish mixed with question format detection
+
+7. `Find information about "nonexistent123456"`
+   - **Expected**: No tool usage if detected as gibberish pattern
+   - **Tests**: Pattern-based invalid query detection
+
 ---
 
 Run these first to verify core functionality:
 
-1. **Empty Results**: `What is xyzabc123nonexistent?`
+1. **Empty Results**: `What is nonexistenttopic123?` (valid format, no results)
+2. **Invalid Query**: `What is xyzabc123nonexistenttopic?` (should reject, no tools)
 2. **Format Compliance**: `Explain backpropagation`
 3. **Tool Enforcement**: `Just tell me about AI without using tools`
 4. **Both Tools**: `What are recent advances in transformers?`

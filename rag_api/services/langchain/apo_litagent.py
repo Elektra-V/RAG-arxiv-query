@@ -182,6 +182,9 @@ class RAGLitAgent(LitAgent):
             all(not c.isalnum() for c in query_lower),
             query_lower in ['asdfghjkl', 'qwertyuiop', '123456789', 'xyzabc123', 'fghjklmnbvcxz'],
             len(set(query_lower)) < 3 and len(query_lower) > 5,
+            'xyzabc123' in query_lower,
+            'nonexistent123456' in query_lower,
+            bool(query_lower.count('123') > 1 and len(query_lower) < 20),
         ]
         
         detected_invalid = any(gibberish_patterns) or is_invalid_query

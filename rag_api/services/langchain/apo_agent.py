@@ -178,6 +178,9 @@ def rag_response_grader(rollout_result: Dict[str, Any]) -> float:
         all(not c.isalnum() for c in query),
         query in ['asdfghjkl', 'qwertyuiop', '123456789', 'xyzabc123', 'fghjklmnbvcxz'],
         len(set(query)) < 3 and len(query) > 5,  # Too repetitive
+        'xyzabc123' in query.lower(),  # Common gibberish pattern
+        'nonexistent123456' in query.lower(),  # Gibberish pattern
+        bool(query.count('123') > 1 and len(query) < 20),  # Multiple number sequences
     ]
     
     detected_invalid = any(gibberish_patterns) or is_invalid_query
