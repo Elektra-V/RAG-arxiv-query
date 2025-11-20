@@ -138,20 +138,21 @@ def display_behavior_comparison(
         if optimized_intelligent:
             optimized_stats['intelligent_choices'] += 1
         
-        # Determine improvement
-        if optimized_intelligent and not baseline_intelligent:
-            improvement = f"[green]✓ Learned intelligent choice[/green]"
-        elif optimized_intelligent and baseline_intelligent:
-            improvement = "[cyan]Both intelligent[/cyan]"
-        elif not optimized_intelligent and baseline_intelligent:
-            improvement = "[red]⚠ Regressed[/red]"
-        else:
-            improvement = "[yellow]No change[/yellow]"
-        
-        # Truncate query for display
-        query_display = query[:37] + "..." if len(query) > 40 else query
-        
-        table.add_row(query_display, baseline_first, optimized_first, improvement)
+        # Add to table only if verbose
+        if verbose:
+            # Determine improvement
+            if optimized_intelligent and not baseline_intelligent:
+                improvement = f"[green]✓ Learned intelligent choice[/green]"
+            elif optimized_intelligent and baseline_intelligent:
+                improvement = "[cyan]Both intelligent[/cyan]"
+            elif not optimized_intelligent and baseline_intelligent:
+                improvement = "[red]⚠ Regressed[/red]"
+            else:
+                improvement = "[yellow]No change[/yellow]"
+            
+            # Truncate query for display
+            query_display = query[:37] + "..." if len(query) > 40 else query
+            table.add_row(query_display, baseline_first, optimized_first, improvement)
     
     if verbose:
         console.print(table)
