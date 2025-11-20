@@ -56,6 +56,9 @@ class Settings(BaseSettings):
     ingestion_host: str = "0.0.0.0"
     ingestion_port: int = 9030
 
+    # APO (Automatic Prompt Optimization) settings
+    apo_optimized_prompt_path: Optional[str] = None  # Path to optimized prompt file (default: "optimized_prompt.txt")
+
 
 @lru_cache
 def get_settings() -> Settings:

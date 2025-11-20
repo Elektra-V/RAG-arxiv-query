@@ -111,4 +111,53 @@ def build_agent(prompt_template: str | None = None):
     return create_react_agent(model=model, tools=tools, prompt=prompt)
 
 
-agent = build_agent()
+def _load_optimized_prompt() -> str | None:
+    """Load optimized prompt from file if it exists.
+    
+    Returns:
+        Optimized prompt string if file exists, None otherwise
+    """
+    from pathlib import Path
+    import logging
+    
+    logger = logging.getLogger(__name__)
+    
+    # Check for optimized prompt file (created by train_apo.py)
+    optimized_path = Path("optimized_prompt.txt")
+    
+    if optimized_path.exists():
+        try:
+            prompt = optimized_path.read_text(encoding='utf-8')
+            logger.info(f"✓ Loaded optimized prompt from {optimized_path}")
+            return prompt
+        except Exception as e:
+            logger.warning(f"Failed to load optimized prompt: {e}")
+            return None
+    
+    # Also check in project root (if running from different directory)
+    project_root = Path(__file__).parent.parent.parent.parent
+    optimized_path = project_root / "optimized_prompt.txt"
+    
+    if optimized_path.exists():
+        try:
+            prompt = optimized_path.read_text(encoding='utf-8')
+            logger.info(f"✓ Loaded optimized prompt from {optimized_path}")
+            return prompt
+        except Exception as e:
+            logger.warning(f"Failed to load optimized prompt: {e}")
+            return None
+    
+    return None
+
+
+# Load optimized prompt if available, otherwise use baseline
+# This agent is used by routes.py for API endpoints
+optimized_prompt = _load_optimized_prompt()
+
+if optimized_prompt:
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.info("🚀 Using OPTIMIZED prompt from APO training")
+    agent = build_agent(prompt_template=optimized_prompt)
+else:
+    agent = build_agent()
