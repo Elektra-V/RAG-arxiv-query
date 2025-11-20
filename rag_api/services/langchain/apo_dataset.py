@@ -6,11 +6,7 @@ from typing import Dict, List
 
 
 def load_training_dataset() -> List[Dict[str, any]]:
-    """Load training dataset for APO.
-    
-    Returns:
-        List of task dicts with queries and evaluation criteria
-    """
+    """Return training dataset for APO."""
     return [
         {
             'query': 'What is quantum computing?',
@@ -106,11 +102,7 @@ def load_training_dataset() -> List[Dict[str, any]]:
 
 
 def load_validation_dataset() -> List[Dict[str, any]]:
-    """Load validation dataset for APO.
-    
-    Returns:
-        List of task dicts with queries and evaluation criteria
-    """
+    """Return validation dataset for APO."""
     return [
         {
             'query': 'What is machine learning?',
@@ -143,4 +135,3 @@ def load_validation_dataset() -> List[Dict[str, any]]:
             'quality_score': 0.85
         }
     ]
-
