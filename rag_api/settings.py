@@ -60,7 +60,6 @@ class Settings(BaseSettings):
 
     # APO (Automatic Prompt Optimization) settings
     apo_optimized_prompt_path: Optional[str] = None  # Path to optimized prompt file (default: "optimized_prompt.txt")
-    apo_use_optimized_prompt: bool = True  # If false, always use baseline prompt
 
 
 @lru_cache

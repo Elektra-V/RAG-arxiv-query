@@ -105,10 +105,6 @@ def _load_optimized_prompt() -> str | None:
     """Load optimized prompt from file if exists."""
     settings = get_settings()
     
-    # Allow disabling optimized prompt via settings
-    if not settings.apo_use_optimized_prompt:
-        return None
-    
     if settings.apo_optimized_prompt_path:
         optimized_path = Path(settings.apo_optimized_prompt_path)
         if optimized_path.exists():
