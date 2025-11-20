@@ -27,6 +27,10 @@ def create_app() -> FastAPI:
     configure_logging()
     api = FastAPI(title="RAG Ingestion Service")
 
+    @api.get("/health")
+    async def health():
+        return {"status": "healthy", "service": "ingestion"}
+
     @api.post("/ingest", response_model=IngestionResponse)
     async def ingest(payload: IngestionRequest) -> IngestionResponse:
         query = payload.query or settings.arxiv_query
@@ -34,9 +38,7 @@ def create_app() -> FastAPI:
 
         try:
             summary = run_ingestion(query=query, max_docs=max_docs)
-        except (
-            Exception
-        ) as exc:  # pragma: no cover - network failures handled at runtime
+        except Exception as exc:
             logging.exception("Ingestion failed: %s", exc)
             raise HTTPException(status_code=500, detail="Ingestion failed") from exc
 

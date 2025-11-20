@@ -2,9 +2,16 @@ services:
   qdrant:
     image: qdrant/qdrant:latest
     ports:
-      - "6334:6333"  # External port 6334 to avoid conflict with original project
+      - "6334:6333"
     volumes:
       - qdrant_data:/qdrant/storage
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6333/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
 
   langchain:
     build:
@@ -17,9 +24,17 @@ services:
       - LANGCHAIN_HOST=0.0.0.0
       - LANGCHAIN_PORT=9010
     depends_on:
-      - qdrant
+      qdrant:
+        condition: service_healthy
     ports:
-      - "9010:9010"  # Changed from 8009 to avoid conflicts
+      - "9010:9010"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9010/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    restart: unless-stopped
 
   llamaindex:
     build:
@@ -32,9 +47,17 @@ services:
       - LLAMAINDEX_HOST=0.0.0.0
       - LLAMAINDEX_PORT=9020
     depends_on:
-      - qdrant
+      qdrant:
+        condition: service_healthy
     ports:
-      - "9020:9020"  # Changed from 8080 to avoid conflicts
+      - "9020:9020"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9020/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    restart: unless-stopped
 
   ingestion:
     build:
@@ -47,10 +70,17 @@ services:
       - INGESTION_HOST=0.0.0.0
       - INGESTION_PORT=9030
     depends_on:
-      - qdrant
+      qdrant:
+        condition: service_healthy
     ports:
-      - "9030:9030"  # Changed from 8010 to avoid conflicts
-    command: ["uv", "run", "python", "-m", "rag_api.services.ingestion.app"]
+      - "9030:9030"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9030/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    restart: unless-stopped
 
 volumes:
   qdrant_data:
