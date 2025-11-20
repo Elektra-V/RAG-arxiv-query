@@ -2,24 +2,73 @@
 
 A Retrieval Augmented Generation system for querying academic papers using LangChain ReAct agent with vector database and arXiv search.
 
-## Quick Start
+## Prerequisites
 
+- Docker and Docker Compose
+- Python 3.10+
+- `uv` package manager (`pip install uv` or `brew install uv`)
+
+## Setup
+
+### 1. Clone and navigate
 ```bash
-# 1. Configure environment
+cd rag-api
+```
+
+### 2. Configure environment
+```bash
 cp env.example .env
-# Edit .env with your OPENAI_API_KEY
+```
 
-# 2. Start services
-docker compose up --build
+Edit `.env` and set:
+```bash
+OPENAI_API_KEY="sk-your-key-here"
+```
 
-# 3. Ingest papers (optional, in another terminal)
-uv run rag-api-ingest --query "machine learning" --max-docs 5
+### 3. Install dependencies
+```bash
+uv sync
+```
 
-# 4. Start LangGraph Studio (in another terminal)
+### 4. Start Qdrant (vector database)
+```bash
+docker compose up --build -d
+```
+
+Verify Qdrant is running:
+```bash
+curl http://localhost:6334/collections
+```
+
+### 5. Ingest papers (required before querying)
+```bash
+uv run rag-api-ingest --query "machine learning" --max-docs 10
+```
+
+### 6. Start LangGraph Studio
+```bash
 uv run langgraph dev
 ```
 
-Access Studio at `http://localhost:8123`
+Open `http://localhost:8123` in your browser.
+
+---
+
+## Usage
+
+### Query via Studio
+1. Open `http://localhost:8123`
+2. Enter a question (e.g., "What is quantum computing?")
+3. Agent will use tools and return answer
+
+### Query via API
+```bash
+curl -X POST http://localhost:9010/query \
+  -H "Content-Type: application/json" \
+  -d '{"question": "What is quantum computing?"}'
+```
+
+API docs: `http://localhost:9010/docs`
 
 ---
 
@@ -37,56 +86,16 @@ See `env.example` for all settings.
 
 ---
 
-## Usage
-
-### LangGraph Studio
-1. Run `uv run langgraph dev`
-2. Open the Studio URL in your browser
-3. Enter your question
-
-### API
-```bash
-curl -X POST http://localhost:9010/query \
-  -H "Content-Type: application/json" \
-  -d '{"question": "What is quantum computing?"}'
-```
-
-API docs: `http://localhost:9010/docs`
-
----
-
 ## Automatic Prompt Optimization (APO)
 
-Optimize the agent's prompt automatically using Agent-lightning:
-
 ```bash
-# Ensure Qdrant is running and has ingested papers
 docker compose up -d
-
-# Run optimization
 uv run python -m rag_api.services.langchain.train_apo
 ```
 
-The optimized prompt is saved to `optimized_prompt.txt` and automatically loaded by the agent.
+Optimized prompt saved to `optimized_prompt.txt` and auto-loaded.
 
-**Configuration:** Edit `rag_api/services/langchain/apo_config.py` to adjust:
-- `num_iterations`: Training iterations (default: 2)
-- `samples_per_iteration`: Samples per iteration (default: 3)
-- `num_runners`: Parallel workers (default: 1)
-
----
-
-## Architecture
-
-```
-User Query
-    ↓
-ReAct Agent
-    ├─→ rag_query (Vector DB) → Qdrant
-    └─→ arxiv_search → arXiv API
-    ↓
-LLM Response
-```
+**Config:** Edit `rag_api/services/langchain/apo_config.py`
 
 ---
 
@@ -95,16 +104,18 @@ LLM Response
 **Port conflicts:**
 ```bash
 docker compose down
-lsof -ti :6334 | xargs kill -9  # Qdrant
+lsof -ti :6334 | xargs kill -9
 ```
 
 **Empty results:**
-- Run ingestion: `uv run rag-api-ingest --query "topic" --max-docs 5`
+```bash
+uv run rag-api-ingest --query "topic" --max-docs 10
+```
 
-**Studio connection issues:**
-- Ensure LangGraph server is running
+**Studio connection:**
+- Ensure `uv run langgraph dev` is running
 - Use Chrome browser
-- Check base URL in LangSmith Studio matches local URL
+- Check URL matches console output
 
 ---
 
@@ -112,29 +123,28 @@ lsof -ti :6334 | xargs kill -9  # Qdrant
 
 ```
 rag-api/
-├── .env                 # Your configuration
+├── .env                 # Configuration
 ├── docker-compose.yml   # Qdrant service
 ├── rag_api/
 │   ├── services/langchain/  # ReAct agent
 │   ├── ingestion/           # Paper ingestion
 │   └── clients/              # API clients
-└── optimized_prompt.txt      # APO optimized prompt (after training)
+└── optimized_prompt.txt      # APO optimized prompt
 ```
 
 ---
 
 ## How It Works
 
-1. **Ingestion**: Papers are downloaded from arXiv, embedded, and stored in Qdrant
-2. **Query**: User asks a question
-3. **RAG Search**: Agent searches ingested papers in vector database
-4. **arXiv Search**: If needed, agent searches arXiv API directly
-5. **Response**: Agent synthesizes answer with citations
+1. Papers ingested → embedded → stored in Qdrant
+2. User query → agent searches vector DB
+3. If needed → agent searches arXiv API
+4. Agent synthesizes answer with citations
 
-The agent automatically uses the optimized prompt if available, otherwise uses the baseline prompt.
+Agent auto-loads optimized prompt if available.
 
 ---
 
 ## Testing
 
-See `STUDIO_TEST_PROMPTS.md` for edge case test queries.
+See `STUDIO_TEST_PROMPTS.md` for test queries.
