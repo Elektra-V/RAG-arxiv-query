@@ -191,6 +191,20 @@ def load_training_dataset() -> List[Dict[str, any]]:
             'expected_output_contains': ['invalid', 'valid query'],
             'quality_score': 0.85,
             'is_invalid': True
+        },
+        {
+            'query': 'What is nonexistenttopic123?',
+            'expected_tool_usage': [],
+            'expected_output_contains': ['invalid', 'valid query'],
+            'quality_score': 0.9,
+            'is_invalid': True
+        },
+        {
+            'query': 'Tell me about nonexistenttopic456',
+            'expected_tool_usage': [],
+            'expected_output_contains': ['invalid', 'valid query'],
+            'quality_score': 0.9,
+            'is_invalid': True
         }
     ]
 

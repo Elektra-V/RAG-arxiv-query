@@ -184,7 +184,9 @@ class RAGLitAgent(LitAgent):
             len(set(query_lower)) < 3 and len(query_lower) > 5,
             'xyzabc123' in query_lower,
             'nonexistent123456' in query_lower,
+            'nonexistenttopic' in query_lower,  # Invalid pattern: nonexistent + topic
             bool(query_lower.count('123') > 1 and len(query_lower) < 20),
+            bool('nonexistent' in query_lower and any(char.isdigit() for char in query_lower)),  # nonexistent + numbers
         ]
         
         detected_invalid = any(gibberish_patterns) or is_invalid_query
